@@ -20,7 +20,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +36,7 @@ fun RedisAppShell(
     connectionState: ConnectionUiState,
     modifier: Modifier = Modifier,
 ) {
-    var destination by rememberSaveable { mutableStateOf(ShellDestination.Connections) }
+    var destination by remember { mutableStateOf(ShellDestination.Connections) }
     val layoutType = rememberShellNavigationSuiteType()
 
     NavigationSuiteScaffold(

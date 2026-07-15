@@ -8,8 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.window.core.layout.WindowSizeClass
 
 /**
- * Pure helper for tests: compact → NavigationBar; otherwise NavigationRail.
- * Compose entrypoint [rememberShellNavigationSuiteType] uses real adaptive info.
+ * Pure resolver used by the production non-compact path and direct unit tests.
+ *
+ * Its compact contract remains NavigationBar, while [rememberShellNavigationSuiteType] delegates
+ * compact adaptive behavior to Material's navigation suite defaults.
  */
 fun resolveNavigationSuiteType(isCompactWidth: Boolean): NavigationSuiteType =
     if (isCompactWidth) {
@@ -18,6 +20,13 @@ fun resolveNavigationSuiteType(isCompactWidth: Boolean): NavigationSuiteType =
         NavigationSuiteType.NavigationRail
     }
 
+/**
+ * Resolves shell navigation from adaptive window information.
+ *
+ * Non-compact windows use the testable [resolveNavigationSuiteType] policy. Compact windows
+ * delegate to [NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo] so Material can account
+ * for adaptive details beyond width that the pure helper intentionally does not model.
+ */
 @Composable
 fun rememberShellNavigationSuiteType(
     adaptiveInfo: WindowAdaptiveInfo = currentWindowAdaptiveInfo(),
@@ -28,6 +37,6 @@ fun rememberShellNavigationSuiteType(
     return if (isCompact) {
         NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(adaptiveInfo)
     } else {
-        NavigationSuiteType.NavigationRail
+        resolveNavigationSuiteType(isCompactWidth = false)
     }
 }

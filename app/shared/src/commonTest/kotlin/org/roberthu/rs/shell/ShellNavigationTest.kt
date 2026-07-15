@@ -15,6 +15,8 @@ class ShellNavigationTest {
 
     @Test
     fun compact_usesNavigationBar() {
+        // Production compact navigation delegates to calculateFromAdaptiveInfo; this verifies the
+        // documented width-only contract of the pure resolver.
         assertEquals(
             NavigationSuiteType.NavigationBar,
             resolveNavigationSuiteType(isCompactWidth = true),
