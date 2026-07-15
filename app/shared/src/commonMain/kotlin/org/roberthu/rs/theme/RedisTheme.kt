@@ -15,14 +15,18 @@ internal val RedisDarkColorScheme: ColorScheme =
     darkColorScheme(
         primary = RedisColors.Primary,
         onPrimary = Color.White,
+        // Neutral containers — do not let M3 auto-derive pink primaryContainer tints for plates.
+        primaryContainer = Color(0xFF3A2A2A),
+        onPrimaryContainer = Color(0xFFFFDAD6),
         background = RedisColors.Background,
         onBackground = Color(0xFFE0E0E0),
         surface = RedisColors.Background,
         onSurface = Color(0xFFE0E0E0),
         onSurfaceVariant = Color(0xFFB0B0B0),
+        surfaceTint = Color.Transparent,
         surfaceContainer = RedisColors.SurfaceContainer,
-        surfaceContainerHigh = RedisColors.SurfaceContainer,
-        surfaceContainerHighest = Color(0xFF333333),
+        surfaceContainerHigh = Color(0xFF333333),
+        surfaceContainerHighest = Color(0xFF3A3A3A),
         // Selected NavigationRail labels resolve to `secondary` — must not match surfaceContainer.
         secondary = Color(0xFFE0E0E0),
         onSecondary = Color(0xFF1E1E1E),
@@ -30,17 +34,21 @@ internal val RedisDarkColorScheme: ColorScheme =
         secondaryContainer = Color(0xFF4A4458),
         onSecondaryContainer = Color(0xFFE8DEF8),
         error = Color(0xFFCF6679),
+        scrim = Color.Black.copy(alpha = 0.52f),
     )
 
 internal val RedisLightColorScheme: ColorScheme =
     lightColorScheme(
         primary = RedisColors.Primary,
         onPrimary = Color.White,
+        primaryContainer = Color(0xFFFFDAD6),
+        onPrimaryContainer = Color(0xFF410002),
         background = Color(0xFFF5F5F5),
         onBackground = Color(0xFF1E1E1E),
         surface = Color(0xFFFFFFFF),
         onSurface = Color(0xFF1E1E1E),
         onSurfaceVariant = Color(0xFF5C5C5C),
+        surfaceTint = Color.Transparent,
         surfaceContainer = Color(0xFFEEEEEE),
         surfaceContainerHigh = Color(0xFFE8E8E8),
         surfaceContainerHighest = Color(0xFFE0E0E0),
@@ -49,6 +57,7 @@ internal val RedisLightColorScheme: ColorScheme =
         secondaryContainer = Color(0xFFE8DEF8),
         onSecondaryContainer = Color(0xFF1D192B),
         error = Color(0xFFB00020),
+        scrim = Color.Black.copy(alpha = 0.40f),
     )
 
 /** Label color NavigationRail uses when an item is selected (Material token mapping). */

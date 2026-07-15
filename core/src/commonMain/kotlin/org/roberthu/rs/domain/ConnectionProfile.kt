@@ -16,6 +16,28 @@ data class TimeoutOptions(
     val reconnectMs: Long = 30_000,
 )
 
+enum class SshAuthMethod {
+    Password,
+    PrivateKey,
+}
+
+/**
+ * SSH local port-forward tunnel used only for [DeploymentMode.Standalone].
+ * When enabled, Redis traffic is proxied through [host]:[port] to the Redis endpoint.
+ */
+data class SshTunnelOptions(
+    val enabled: Boolean = false,
+    val host: String = "",
+    val port: Int = 22,
+    val username: String = "",
+    val authMethod: SshAuthMethod = SshAuthMethod.Password,
+    val password: String? = null,
+    val privateKey: String? = null,
+    val privateKeyPath: String? = null,
+    val privateKeyPassphrase: String? = null,
+    val connectTimeoutMs: Long = 10_000,
+)
+
 data class ConnectionProfile(
     val id: String,
     val name: String,
@@ -31,6 +53,7 @@ data class ConnectionProfile(
     val tls: TlsOptions = TlsOptions(enabled = false),
     val timeouts: TimeoutOptions = TimeoutOptions(),
     val clientName: String? = null,
+    val ssh: SshTunnelOptions = SshTunnelOptions(),
 ) {
     fun validate(): List<String> = buildList {
         if (name.isBlank()) {
@@ -72,6 +95,38 @@ data class ConnectionProfile(
                 }
                 if (database != 0) {
                     add("Database must be 0 in cluster mode")
+                }
+            }
+        }
+
+        if (ssh.enabled) {
+            if (mode != DeploymentMode.Standalone) {
+                add("SSH tunnel is only supported in Standalone mode")
+            }
+            if (ssh.host.isBlank()) {
+                add("SSH host must not be blank")
+            }
+            if (ssh.port !in 1..65535) {
+                add("SSH port must be between 1 and 65535")
+            }
+            if (ssh.username.isBlank()) {
+                add("SSH username must not be blank")
+            }
+            if (ssh.connectTimeoutMs <= 0) {
+                add("SSH connect timeout must be greater than 0")
+            }
+            when (ssh.authMethod) {
+                SshAuthMethod.Password -> {
+                    if (ssh.password.isNullOrBlank()) {
+                        add("SSH password must not be blank")
+                    }
+                }
+                SshAuthMethod.PrivateKey -> {
+                    val hasKeyMaterial =
+                        !ssh.privateKey.isNullOrBlank() || !ssh.privateKeyPath.isNullOrBlank()
+                    if (!hasKeyMaterial) {
+                        add("SSH private key or private key path is required")
+                    }
                 }
             }
         }

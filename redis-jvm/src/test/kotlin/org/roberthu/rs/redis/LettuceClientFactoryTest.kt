@@ -51,6 +51,23 @@ class LettuceClientFactoryTest {
         assertEquals("VALIDATION", error.code)
     }
 
+    @Test
+    fun rejectsIncompleteSshTunnelBeforeAllocatingClient() {
+        val error = assertFailsWith<RedisError.Validation> {
+            factory.create(
+                profile(DeploymentMode.Standalone).copy(
+                    ssh = org.roberthu.rs.domain.SshTunnelOptions(
+                        enabled = true,
+                        host = "",
+                        username = "",
+                    ),
+                ),
+            )
+        }
+
+        assertEquals("VALIDATION", error.code)
+    }
+
     private fun profile(mode: DeploymentMode) = ConnectionProfile(
         id = "test",
         name = "Test",

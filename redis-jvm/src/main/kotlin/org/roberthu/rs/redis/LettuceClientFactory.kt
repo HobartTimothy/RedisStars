@@ -20,11 +20,15 @@ sealed class LettuceClientHandle : AutoCloseable {
     class Standard internal constructor(
         override val mode: DeploymentMode,
         private val client: RedisClient,
+        private val tunnel: SshLocalTunnel? = null,
     ) : LettuceClientHandle() {
         override fun <K, V> connect(codec: RedisCodec<K, V>): StatefulConnection<K, V> =
             client.connect(codec)
 
-        override fun close() = client.shutdown()
+        override fun close() {
+            runCatching { client.shutdown() }
+            tunnel.closeQuietly()
+        }
     }
 
     class Cluster internal constructor(
@@ -46,49 +50,57 @@ class LettuceClientFactory {
             throw RedisError.Validation(validationErrors.joinToString("; "))
         }
 
+        val tunnel = SshLocalTunnel.openIfNeeded(profile)
+        val effectiveHost = tunnel?.localHost ?: profile.host
+        val effectivePort = tunnel?.localPort ?: profile.port
+
         val socketOptions = SocketOptions.builder()
             .connectTimeout(Duration.ofMillis(profile.timeouts.connectMs))
             .build()
-        return when (profile.mode) {
-            DeploymentMode.Standalone -> {
-                val client = RedisClient.create(standaloneUri(profile))
-                client.setOptions(
-                    ClientOptions.builder()
-                        .autoReconnect(false)
-                        .socketOptions(socketOptions)
-                        .build(),
-                )
-                LettuceClientHandle.Standard(profile.mode, client)
-            }
+        return try {
+            when (profile.mode) {
+                DeploymentMode.Standalone -> {
+                    val client = RedisClient.create(
+                        redisUri(profile, effectiveHost, effectivePort, profile.database),
+                    )
+                    client.setOptions(
+                        ClientOptions.builder()
+                            .autoReconnect(false)
+                            .socketOptions(socketOptions)
+                            .build(),
+                    )
+                    LettuceClientHandle.Standard(profile.mode, client, tunnel)
+                }
 
-            DeploymentMode.Sentinel -> {
-                val client = RedisClient.create(sentinelUri(profile))
-                client.setOptions(
-                    ClientOptions.builder()
-                        .autoReconnect(false)
-                        .socketOptions(socketOptions)
-                        .build(),
-                )
-                LettuceClientHandle.Standard(profile.mode, client)
-            }
+                DeploymentMode.Sentinel -> {
+                    val client = RedisClient.create(sentinelUri(profile))
+                    client.setOptions(
+                        ClientOptions.builder()
+                            .autoReconnect(false)
+                            .socketOptions(socketOptions)
+                            .build(),
+                    )
+                    LettuceClientHandle.Standard(profile.mode, client)
+                }
 
-            DeploymentMode.Cluster -> {
-                val client = RedisClusterClient.create(profile.seedNodes.map { seed ->
-                    redisUri(profile, seed.host, seed.port, database = 0)
-                })
-                client.setOptions(
-                    ClusterClientOptions.builder()
-                        .autoReconnect(false)
-                        .socketOptions(socketOptions)
-                        .build(),
-                )
-                LettuceClientHandle.Cluster(client)
+                DeploymentMode.Cluster -> {
+                    val client = RedisClusterClient.create(profile.seedNodes.map { seed ->
+                        redisUri(profile, seed.host, seed.port, database = 0)
+                    })
+                    client.setOptions(
+                        ClusterClientOptions.builder()
+                            .autoReconnect(false)
+                            .socketOptions(socketOptions)
+                            .build(),
+                    )
+                    LettuceClientHandle.Cluster(client)
+                }
             }
+        } catch (failure: Throwable) {
+            tunnel.closeQuietly()
+            throw failure
         }
     }
-
-    private fun standaloneUri(profile: ConnectionProfile): RedisURI =
-        redisUri(profile, profile.host, profile.port, profile.database)
 
     private fun sentinelUri(profile: ConnectionProfile): RedisURI {
         val first = profile.sentinelNodes.first()
@@ -131,5 +143,13 @@ class LettuceClientFactory {
         }
         profile.clientName?.let(builder::withClientName)
         return builder
+    }
+}
+
+private fun SshLocalTunnel?.closeQuietly() {
+    try {
+        this?.close()
+    } catch (_: Throwable) {
+        // Cleanup must not mask the original failure.
     }
 }

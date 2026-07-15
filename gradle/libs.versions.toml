@@ -8,6 +8,7 @@ kotlinx-serialization = "1.9.0"
 lettuce = "6.5.5.RELEASE"
 logback = "1.5.34"
 material3 = "1.11.0-alpha07"
+sshj = "0.40.0"
 testcontainers = "1.20.6"
 
 [libraries]
@@ -30,6 +31,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 lettuce-core = { module = "io.lettuce:lettuce-core", version.ref = "lettuce" }
+sshj = { module = "com.hierynomus:sshj", version.ref = "sshj" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-junit4 = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }

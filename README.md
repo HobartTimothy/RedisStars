@@ -13,7 +13,9 @@ The Gradle build contains four modules:
 - [`app/shared`](./app/shared/src) — Compose UI, unidirectional UI state, and view models, compiled for JVM only.
 - [`app/desktopApp`](./app/desktopApp/src) — desktop entry point and composition root, wiring the shared UI to Lettuce and local JSON persistence.
 
-The current connection editor exposes Standalone profile fields. Sentinel and Cluster are supported by the domain, persistence, and Lettuce adapter, but their profile fields are not yet exposed in the UI. See [Redis test environments](./docs/redis-test-environments.md) for local setup notes.
+The connection editor dialog supports Standalone, Sentinel, and Cluster profiles.
+Standalone profiles can optionally reach Redis through an SSH local port-forward tunnel.
+See [Redis test environments](./docs/redis-test-environments.md) for local setup notes.
 
 ## Security and local data
 

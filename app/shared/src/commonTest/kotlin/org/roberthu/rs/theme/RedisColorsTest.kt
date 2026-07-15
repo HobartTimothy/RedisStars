@@ -41,6 +41,12 @@ class RedisColorsTest {
     }
 
     @Test
+    fun surfaceTintIsTransparentToAvoidPrimaryWashOnElevatedSurfaces() {
+        assertEquals(Color.Transparent, RedisDarkColorScheme.surfaceTint)
+        assertEquals(Color.Transparent, RedisLightColorScheme.surfaceTint)
+    }
+
+    @Test
     fun switchingSelection_preservesAllPrimaryLabels() {
         // Regression: selection must not drop label content (labels are destination.label).
         var state = ShellUiState()

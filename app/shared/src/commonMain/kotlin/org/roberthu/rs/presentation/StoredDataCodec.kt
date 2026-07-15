@@ -7,6 +7,8 @@ import kotlinx.serialization.json.Json
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.domain.DeploymentMode
 import org.roberthu.rs.domain.HostPort
+import org.roberthu.rs.domain.SshAuthMethod
+import org.roberthu.rs.domain.SshTunnelOptions
 import org.roberthu.rs.domain.TimeoutOptions
 import org.roberthu.rs.domain.TlsOptions
 import org.roberthu.rs.port.UserSettings
@@ -74,6 +76,20 @@ private data class StoredTimeoutOptions(
 )
 
 @Serializable
+private data class StoredSshOptions(
+    val enabled: Boolean = false,
+    val host: String = "",
+    val port: Int = 22,
+    val username: String = "",
+    val authMethod: String = SshAuthMethod.Password.name,
+    val password: String? = null,
+    val privateKey: String? = null,
+    val privateKeyPath: String? = null,
+    val privateKeyPassphrase: String? = null,
+    val connectTimeoutMs: Long = 10_000,
+)
+
+@Serializable
 private data class StoredProfile(
     val id: String,
     val name: String,
@@ -89,6 +105,7 @@ private data class StoredProfile(
     val tls: StoredTlsOptions = StoredTlsOptions(),
     val timeouts: StoredTimeoutOptions = StoredTimeoutOptions(),
     val clientName: String? = null,
+    val ssh: StoredSshOptions = StoredSshOptions(),
 ) {
     fun toDomain() = ConnectionProfile(
         id = id,
@@ -105,6 +122,19 @@ private data class StoredProfile(
         tls = TlsOptions(tls.enabled, tls.verifyPeer),
         timeouts = TimeoutOptions(timeouts.connectMs, timeouts.commandMs, timeouts.reconnectMs),
         clientName = clientName,
+        ssh = SshTunnelOptions(
+            enabled = ssh.enabled,
+            host = ssh.host,
+            port = ssh.port,
+            username = ssh.username,
+            authMethod = runCatching { SshAuthMethod.valueOf(ssh.authMethod) }
+                .getOrDefault(SshAuthMethod.Password),
+            password = ssh.password,
+            privateKey = ssh.privateKey,
+            privateKeyPath = ssh.privateKeyPath,
+            privateKeyPassphrase = ssh.privateKeyPassphrase,
+            connectTimeoutMs = ssh.connectTimeoutMs,
+        ),
     )
 
     companion object {
@@ -127,6 +157,18 @@ private data class StoredProfile(
                 profile.timeouts.reconnectMs,
             ),
             clientName = profile.clientName,
+            ssh = StoredSshOptions(
+                enabled = profile.ssh.enabled,
+                host = profile.ssh.host,
+                port = profile.ssh.port,
+                username = profile.ssh.username,
+                authMethod = profile.ssh.authMethod.name,
+                password = profile.ssh.password.takeIf { rememberPassword },
+                privateKey = profile.ssh.privateKey.takeIf { rememberPassword },
+                privateKeyPath = profile.ssh.privateKeyPath,
+                privateKeyPassphrase = profile.ssh.privateKeyPassphrase.takeIf { rememberPassword },
+                connectTimeoutMs = profile.ssh.connectTimeoutMs,
+            ),
         )
     }
 }

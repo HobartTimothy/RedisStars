@@ -6,6 +6,7 @@ plugins {
 dependencies {
     api(projects.core)
     implementation(libs.lettuce.core)
+    implementation(libs.sshj)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.kotlin.testJunit)

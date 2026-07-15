@@ -37,12 +37,9 @@ compose.desktop {
             vendor = "RobertHU"
             copyright = "© 2026 RobertHU. All rights reserved."
 
-            // Optional icons (uncomment when assets exist):
-            // windows { iconFile.set(project.file("icons/icon.ico")) }
-            // linux { iconFile.set(project.file("icons/icon.png")) }
-            // macOS { iconFile.set(project.file("icons/icon.icns")) }
-
+            // Derived from src/main/resources/logo.png via icons/generate_icons.py
             windows {
+                iconFile.set(project.file("icons/icon.ico"))
                 menuGroup = "RedisStars"
                 dirChooser = true
                 // Keep this UUID stable across releases so Windows installers can upgrade in place.
@@ -52,6 +49,7 @@ compose.desktop {
             }
 
             linux {
+                iconFile.set(project.file("icons/icon.png"))
                 // Debian/RPM package names are conventionally lowercase.
                 packageName = "redis-stars"
                 menuGroup = "Development"
@@ -62,6 +60,7 @@ compose.desktop {
             }
 
             macOS {
+                iconFile.set(project.file("icons/icon.icns"))
                 bundleID = "org.roberthu.rs"
                 dockName = "RedisStars"
                 dmgPackageVersion = "1.0.0"

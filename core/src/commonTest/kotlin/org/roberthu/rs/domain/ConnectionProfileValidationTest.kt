@@ -89,6 +89,35 @@ class ConnectionProfileValidationTest {
         assertTrue(errors.any { it.contains("reconnect", ignoreCase = true) })
     }
 
+    @Test
+    fun sshRequiresHostUsernameAndCredentialsWhenEnabled() {
+        val errors = sampleStandalone().copy(
+            ssh = SshTunnelOptions(
+                enabled = true,
+                host = "",
+                username = "",
+                authMethod = SshAuthMethod.Password,
+                password = null,
+            ),
+        ).validate()
+
+        assertTrue(errors.any { it.contains("SSH host", ignoreCase = true) })
+        assertTrue(errors.any { it.contains("SSH username", ignoreCase = true) })
+        assertTrue(errors.any { it.contains("SSH password", ignoreCase = true) })
+    }
+
+    @Test
+    fun sshIsRejectedOutsideStandalone() {
+        val errors = sampleStandalone().copy(
+            mode = DeploymentMode.Cluster,
+            seedNodes = listOf(HostPort("127.0.0.1", 7000)),
+            database = 0,
+            ssh = SshTunnelOptions(enabled = true, host = "bastion", username = "u", password = "p"),
+        ).validate()
+
+        assertTrue(errors.any { it.contains("Standalone", ignoreCase = true) })
+    }
+
     private fun sampleStandalone() = ConnectionProfile(
         id = "local",
         name = "Local Redis",
