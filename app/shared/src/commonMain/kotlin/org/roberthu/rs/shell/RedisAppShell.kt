@@ -2,10 +2,12 @@ package org.roberthu.rs.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -15,15 +17,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,25 +29,18 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.theme.connectionIndicatorColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RedisAppShell(
-    connectionState: ConnectionUiState,
-    darkMode: Boolean,
-    onDarkModeChange: (Boolean) -> Unit,
+    state: ShellUiState,
+    onAction: (ShellUiAction) -> Unit,
     modifier: Modifier = Modifier,
+    connectionState: ConnectionState = ConnectionState.Disconnected,
+    connectionsContent: @Composable () -> Unit,
 ) {
-    var destinationName by rememberSaveable {
-        mutableStateOf(ShellDestination.Connections.name)
-    }
-    var railCollapsed by rememberSaveable { mutableStateOf(false) }
-    var autoConnect by remember { mutableStateOf(false) }
-
-    val destination = ShellDestination.entries.firstOrNull { it.name == destinationName }
-        ?: ShellDestination.Connections
-
     val layoutType = rememberShellNavigationSuiteType()
     val usePinnedLeftRail = shouldUsePinnedLeftRail(layoutType)
 
@@ -62,22 +53,16 @@ fun RedisAppShell(
             verticalAlignment = Alignment.Top,
         ) {
             ShellNavigationRail(
-                destination = destination,
-                railCollapsed = railCollapsed,
-                onDestinationSelected = { selected ->
-                    destinationName = selected.name
-                },
-                onToggleCollapsed = {
-                    railCollapsed = !railCollapsed
-                },
+                destination = state.destination,
+                railCollapsed = state.railCollapsed,
+                onDestinationSelected = { onAction(ShellUiAction.Navigate(it)) },
+                onToggleCollapsed = { onAction(ShellUiAction.ToggleRail) },
             )
             ShellMainContent(
+                state = state,
+                onAction = onAction,
                 connectionState = connectionState,
-                destination = destination,
-                darkMode = darkMode,
-                onDarkModeChange = onDarkModeChange,
-                autoConnect = autoConnect,
-                onAutoConnectChange = { autoConnect = it },
+                connectionsContent = connectionsContent,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
@@ -91,8 +76,8 @@ fun RedisAppShell(
             navigationSuiteItems = {
                 ShellDestination.primaryDestinations.forEach { item ->
                     item(
-                        selected = destination == item,
-                        onClick = { destinationName = item.name },
+                        selected = state.destination == item,
+                        onClick = { onAction(ShellUiAction.Navigate(item)) },
                         icon = {
                             Icon(
                                 imageVector = item.icon,
@@ -103,8 +88,10 @@ fun RedisAppShell(
                     )
                 }
                 item(
-                    selected = destination == ShellDestination.Settings,
-                    onClick = { destinationName = ShellDestination.Settings.name },
+                    selected = state.destination == ShellDestination.Settings,
+                    onClick = {
+                        onAction(ShellUiAction.Navigate(ShellDestination.Settings))
+                    },
                     icon = {
                         Icon(
                             imageVector = ShellDestination.Settings.icon,
@@ -116,12 +103,10 @@ fun RedisAppShell(
             },
         ) {
             ShellMainContent(
+                state = state,
+                onAction = onAction,
                 connectionState = connectionState,
-                destination = destination,
-                darkMode = darkMode,
-                onDarkModeChange = onDarkModeChange,
-                autoConnect = autoConnect,
-                onAutoConnectChange = { autoConnect = it },
+                connectionsContent = connectionsContent,
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag("main_content"),
@@ -133,14 +118,20 @@ fun RedisAppShell(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ShellMainContent(
-    connectionState: ConnectionUiState,
-    destination: ShellDestination,
-    darkMode: Boolean,
-    onDarkModeChange: (Boolean) -> Unit,
-    autoConnect: Boolean,
-    onAutoConnectChange: (Boolean) -> Unit,
+    state: ShellUiState,
+    onAction: (ShellUiAction) -> Unit,
+    connectionState: ConnectionState,
+    connectionsContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val connected = connectionState is ConnectionState.Connected
+    val statusText = when (connectionState) {
+        is ConnectionState.Connected -> connectionState.displayName
+        ConnectionState.Connecting -> "Connecting…"
+        is ConnectionState.Reconnecting -> "Reconnecting (${connectionState.attempt})…"
+        is ConnectionState.Failed -> "Connection failed"
+        ConnectionState.Disconnected -> "Disconnected"
+    }
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -153,12 +144,12 @@ private fun ShellMainContent(
                                 .clip(CircleShape)
                                 .background(
                                     connectionIndicatorColor(
-                                        connected = connectionState.connected,
+                                        connected = connected,
                                         onSurface = MaterialTheme.colorScheme.onSurface,
                                     ),
                                 )
                                 .semantics {
-                                    stateDescription = if (connectionState.connected) {
+                                    stateDescription = if (connected) {
                                         "Connected"
                                     } else {
                                         "Disconnected"
@@ -167,7 +158,7 @@ private fun ShellMainContent(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = connectionState.nodeName,
+                            text = statusText,
                             style = MaterialTheme.typography.titleSmall,
                         )
                     }
@@ -180,34 +171,56 @@ private fun ShellMainContent(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentAlignment = Alignment.TopStart,
         ) {
-            when (destination) {
-                ShellDestination.Connections -> {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        KeyBrowserPane()
-                        WorkspacePane(modifier = Modifier.weight(1f))
+            state.bannerError?.let { message ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { onAction(ShellUiAction.DismissError) }) {
+                        Text("Dismiss")
                     }
                 }
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.TopStart,
+            ) {
+                when (state.destination) {
+                    ShellDestination.Connections -> {
+                        connectionsContent()
+                    }
 
-                ShellDestination.Monitor -> MonitorPane()
-                ShellDestination.SlowLog -> SlowLogPane()
-                ShellDestination.Settings -> SettingsScreen(
-                    darkMode = darkMode,
-                    onDarkModeChange = onDarkModeChange,
-                    autoConnect = autoConnect,
-                    onAutoConnectChange = onAutoConnectChange,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("settings_screen"),
-                )
+                    ShellDestination.Monitor -> MonitorPane()
+                    ShellDestination.SlowLog -> SlowLogPane()
+                    ShellDestination.Settings -> SettingsScreen(
+                        darkMode = state.darkMode,
+                        onDarkModeChange = {
+                            onAction(ShellUiAction.SetDarkMode(it))
+                        },
+                        autoConnect = state.autoConnect,
+                        onAutoConnectChange = {
+                            onAction(ShellUiAction.SetAutoConnect(it))
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("settings_screen"),
+                    )
+                }
             }
         }
     }

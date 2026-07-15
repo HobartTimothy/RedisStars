@@ -10,10 +10,23 @@ import androidx.compose.ui.unit.dp
 data class ShellUiState(
     val destination: ShellDestination = ShellDestination.Connections,
     val railCollapsed: Boolean = false,
+    val darkMode: Boolean = true,
+    val autoConnect: Boolean = false,
+    val nodeName: String = "",
+    val connected: Boolean = false,
+    val bannerError: String? = null,
 ) {
     fun toggleRailCollapsed(): ShellUiState = copy(railCollapsed = !railCollapsed)
 
     fun navigateTo(destination: ShellDestination): ShellUiState = copy(destination = destination)
+}
+
+sealed interface ShellUiAction {
+    data class Navigate(val destination: ShellDestination) : ShellUiAction
+    data object ToggleRail : ShellUiAction
+    data class SetDarkMode(val enabled: Boolean) : ShellUiAction
+    data class SetAutoConnect(val enabled: Boolean) : ShellUiAction
+    data object DismissError : ShellUiAction
 }
 
 object ShellRailDefaults {

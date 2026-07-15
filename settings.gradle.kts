@@ -34,6 +34,5 @@ plugins {
 
 include(":app:desktopApp")
 include(":app:shared")
-include(":app:webApp")
 include(":core")
-include(":server")
+include(":redis-jvm")

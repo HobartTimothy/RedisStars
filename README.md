@@ -1,31 +1,41 @@
-This is a Kotlin Multiplatform project targeting Web, Desktop (JVM), Server.
+# RedisStars
 
-* [/app/shared](./app/shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./app/shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./app/shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./app/shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+RedisStars is a JVM desktop client for Redis built with Kotlin and Compose Desktop. It connects directly to Redis and supports key scanning, metadata, TTL and rename/delete operations, plus reading and editing strings, hashes, lists, sets, and sorted sets.
 
-* [/core](./core/src) is for the code that will be shared between all targets in the project.
-  The most important subfolder is [commonMain](./core/src/commonMain/kotlin). If preferred, you
-  can add code to the platform-specific folders here too.
+The former Server and Web applications, HTTP API, and remote client have been removed. RedisStars is now Desktop-only.
 
-* [/server](./server/src/main/kotlin) is for the Ktor server application.
+## Architecture
 
-### Running the apps
+The Gradle build contains four modules:
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
+- [`core`](./core/src) — domain models, validation, use cases, and Redis/persistence ports.
+- [`redis-jvm`](./redis-jvm/src) — Lettuce-based Redis adapter with Standalone, Sentinel, and Cluster connection support.
+- [`app/shared`](./app/shared/src) — Compose UI, unidirectional UI state, and view models, compiled for JVM only.
+- [`app/desktopApp`](./app/desktopApp/src) — desktop entry point and composition root, wiring the shared UI to Lettuce and local JSON persistence.
 
-- Desktop app:
-  - Hot reload: `./gradlew :app:desktopApp:hotRun --auto`
-  - Standard run: `./gradlew :app:desktopApp:run`
-- Server: `./gradlew :server:run`
-- Web app:
-  - Wasm target (faster, modern browsers): `./gradlew :app:webApp:wasmJsBrowserDevelopmentRun`
-  - JS target (slower, supports older browsers): `./gradlew :app:webApp:jsBrowserDevelopmentRun`
+The current connection editor exposes Standalone profile fields. Sentinel and Cluster are supported by the domain, persistence, and Lettuce adapter, but their profile fields are not yet exposed in the UI. See [Redis test environments](./docs/redis-test-environments.md) for local setup notes.
+
+## Security and local data
+
+- TLS peer verification defaults to enabled whenever TLS is selected.
+- Saved passwords are omitted unless “remember passwords” is enabled. When enabled, the desktop JSON store contains plaintext credentials; protect the OS account and do not sync or commit the file.
+- Local config is stored outside this repository (`%APPDATA%\RedisStars` on Windows, otherwise `~/.config/redis-stars`).
+
+## Run
+
+Windows PowerShell:
+
+```powershell
+.\gradlew.bat :app:desktopApp:run
+.\gradlew.bat :app:desktopApp:hotRun --auto
+```
+
+Unix:
+
+```bash
+./gradlew :app:desktopApp:run
+./gradlew :app:desktopApp:hotRun --auto
+```
 
 ### Packaging the desktop app
 
@@ -77,21 +87,15 @@ Linux examples:
 
 If a packaged app fails at runtime with `ClassNotFoundException`, run `./gradlew :app:desktopApp:suggestModules` and add the suggested modules under `nativeDistributions { modules(...) }` in `app/desktopApp/build.gradle.kts`.
 
-### Running tests
+## Tests and verification
 
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
+Run the Desktop verification matrix on Windows:
 
-- Desktop tests: `./gradlew :app:shared:jvmTest`
-- Server tests: `./gradlew :server:test`
-- Web tests:
-  - Wasm target: `./gradlew :app:shared:wasmJsTest`
-  - JS target: `./gradlew :app:shared:jsTest`
+```powershell
+.\gradlew.bat :core:jvmTest
+.\gradlew.bat :redis-jvm:test
+.\gradlew.bat :app:shared:jvmTest
+.\gradlew.bat :app:desktopApp:compileKotlin
+```
 
----
-
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
-[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
-[Kotlin/Wasm](https://kotl.in/wasm/)…
-
-We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
-If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+The `redis-jvm` integration tests use disposable `redis:7-alpine` containers through Testcontainers. They skip through JUnit assumptions when Docker is unavailable.
