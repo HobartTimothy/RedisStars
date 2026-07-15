@@ -25,6 +25,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import org.roberthu.rs.theme.connectionIndicatorColor
 
@@ -70,7 +72,14 @@ fun RedisAppShell(
                                             connected = connectionState.connected,
                                             onSurface = MaterialTheme.colorScheme.onSurface,
                                         ),
-                                    ),
+                                    )
+                                    .semantics {
+                                        stateDescription = if (connectionState.connected) {
+                                            "Connected"
+                                        } else {
+                                            "Disconnected"
+                                        }
+                                    },
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
