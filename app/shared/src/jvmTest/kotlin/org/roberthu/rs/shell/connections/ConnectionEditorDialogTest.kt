@@ -109,7 +109,7 @@ class ConnectionEditorDialogTest {
         onNodeWithTag("connection_editor_name").performTextClearance()
         onNodeWithTag("connection_editor_name").performTextInput("Kept Name")
         onNodeWithTag("connection_editor_section_advanced").performClick()
-        onNodeWithTag("connection_editor_client_name").assertIsDisplayed()
+        onNodeWithTag("connection_editor_key_pattern").assertIsDisplayed()
         onNodeWithTag("connection_editor_section_general").performClick()
         onNodeWithTag("connection_editor_name").assertTextContains("Kept Name")
     }
@@ -345,7 +345,7 @@ class ConnectionEditorDialogTest {
             ConnectionEditorUiState(
                 mode = ConnectionEditorMode.Create,
                 profileId = "connection-1",
-                selectedSection = ConnectionEditorSection.General,
+                selectedSection = ConnectionEditorSection.Ssh,
                 initialForm = form,
                 form = form,
             ),

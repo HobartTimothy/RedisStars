@@ -11,10 +11,114 @@ data class TlsOptions(
 )
 
 data class TimeoutOptions(
-    val connectMs: Long = 5_000,
-    val commandMs: Long = 5_000,
+    val connectMs: Long = 60_000,
+    val commandMs: Long = 60_000,
     val reconnectMs: Long = 30_000,
 )
+
+/** Key browser rendering mode: hierarchical (split on [ConnectionBrowserOptions.keySeparator]) or flat. */
+enum class KeyListViewMode { Tree, Flat }
+
+/** Controls which databases are shown in the database switcher. */
+enum class DatabaseFilterMode { ShowAll, ShowSpecified, HideSpecified }
+
+/** Optional color tag shown next to a connection in the connections list. */
+enum class ConnectionTagColor { None, Red, Orange, Yellow, Green, Blue, Purple }
+
+/**
+ * Per-connection preferences for the key browser UI. Persisted alongside [ConnectionProfile] but
+ * kept as a separate type so it can evolve (new view modes, filters) without touching connection
+ * identity/auth fields.
+ */
+data class ConnectionBrowserOptions(
+    val keyPattern: String = "*",
+    val keySeparator: String = ":",
+    val keyListView: KeyListViewMode = KeyListViewMode.Tree,
+    val keyLoadBatchSize: Int = 10_000,
+    val databaseFilterMode: DatabaseFilterMode = DatabaseFilterMode.ShowAll,
+    /** Parsed DB indices; empty when [databaseFilterMode] is [DatabaseFilterMode.ShowAll]. */
+    val databaseFilterValues: List<Int> = emptyList(),
+    val tagColor: ConnectionTagColor = ConnectionTagColor.None,
+)
+
+/** Coerces free-form/legacy values (blank pattern, out-of-range batch size, stale filters) into safe bounds. */
+fun ConnectionBrowserOptions.normalized(): ConnectionBrowserOptions = copy(
+    keyPattern = keyPattern.ifBlank { "*" },
+    keySeparator = keySeparator.ifBlank { ":" },
+    keyLoadBatchSize = keyLoadBatchSize.coerceIn(1, 100_000),
+    databaseFilterValues = if (databaseFilterMode == DatabaseFilterMode.ShowAll) {
+        emptyList()
+    } else {
+        databaseFilterValues.distinct().sorted()
+    },
+)
+
+/** Applies [databaseFilterMode]/[databaseFilterValues] to narrow the databases shown in the switcher. */
+fun ConnectionBrowserOptions.filterDatabases(all: List<RedisDatabaseSummary>): List<RedisDatabaseSummary> =
+    when (databaseFilterMode) {
+        DatabaseFilterMode.ShowAll -> all
+        DatabaseFilterMode.ShowSpecified -> all.filter { it.index in databaseFilterValues }
+        DatabaseFilterMode.HideSpecified -> all.filter { it.index !in databaseFilterValues }
+    }
+
+/**
+ * Parses/formats the compact database index list syntax used by the "specified databases" filter
+ * text field, e.g. `"0,1,3-5"` <-> `[0, 1, 3, 4, 5]`.
+ */
+object DatabaseIndexListParser {
+    fun parse(raw: String): Result<List<Int>> {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return Result.success(emptyList())
+
+        val values = sortedSetOf<Int>()
+        for (segment in trimmed.split(",")) {
+            val token = segment.trim()
+            if (token.isEmpty()) {
+                return Result.failure(IllegalArgumentException("Database list contains an empty entry"))
+            }
+            if ("-" in token) {
+                val bounds = token.split("-")
+                val start = bounds.getOrNull(0)?.trim()?.toIntOrNull()
+                val end = bounds.getOrNull(1)?.trim()?.toIntOrNull()
+                if (bounds.size != 2 || start == null || end == null || start < 0 || end < 0 || start > end) {
+                    return Result.failure(IllegalArgumentException("Invalid database range: \"$token\""))
+                }
+                values += start..end
+            } else {
+                val value = token.toIntOrNull()
+                if (value == null || value < 0) {
+                    return Result.failure(IllegalArgumentException("Invalid database index: \"$token\""))
+                }
+                values += value
+            }
+        }
+        return Result.success(values.toList())
+    }
+
+    fun format(values: List<Int>): String {
+        val sorted = values.distinct().sorted()
+        if (sorted.isEmpty()) return ""
+
+        val parts = mutableListOf<String>()
+        var rangeStart = sorted[0]
+        var rangeEnd = sorted[0]
+        for (index in 1 until sorted.size) {
+            val current = sorted[index]
+            if (current == rangeEnd + 1) {
+                rangeEnd = current
+            } else {
+                parts += formatRange(rangeStart, rangeEnd)
+                rangeStart = current
+                rangeEnd = current
+            }
+        }
+        parts += formatRange(rangeStart, rangeEnd)
+        return parts.joinToString(",")
+    }
+
+    private fun formatRange(start: Int, end: Int): String =
+        if (start == end) start.toString() else "$start-$end"
+}
 
 enum class SshAuthMethod {
     Password,
@@ -54,6 +158,7 @@ data class ConnectionProfile(
     val timeouts: TimeoutOptions = TimeoutOptions(),
     val clientName: String? = null,
     val ssh: SshTunnelOptions = SshTunnelOptions(),
+    val browser: ConnectionBrowserOptions = ConnectionBrowserOptions(),
     /** When null, the profile is shown under the implicit ungrouped section. */
     val groupId: String? = null,
 ) {

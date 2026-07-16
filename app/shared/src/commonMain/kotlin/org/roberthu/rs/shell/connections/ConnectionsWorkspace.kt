@@ -12,7 +12,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import org.roberthu.rs.domain.ConnectionBrowserOptions
 import org.roberthu.rs.domain.DeploymentMode
+import org.roberthu.rs.domain.normalized
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
 import org.roberthu.rs.port.ConnectionState
@@ -47,12 +49,24 @@ fun ConnectionsWorkspace(
     val detailState by detail.state.collectAsState()
     val connected = connectionsState.connectionState is ConnectionState.Connected
 
-    LaunchedEffect(connectionsState.connectionState) {
+    val connectedProfile = when (val connection = connectionsState.connectionState) {
+        is ConnectionState.Connected ->
+            connectionsState.profiles.firstOrNull { it.id == connection.profileId }
+        else -> null
+    }
+
+    LaunchedEffect(connectionsState.connectionState, connectedProfile?.browser, connectedProfile?.mode, connectedProfile?.database) {
         when (val state = connectionsState.connectionState) {
             is ConnectionState.Connected -> {
                 val profile = connectionsState.profiles.firstOrNull { it.id == state.profileId }
                 val clusterMode = profile?.mode == DeploymentMode.Cluster
-                browser.onConnected(clusterMode, initialDatabase = 0)
+                val initialDatabase = if (clusterMode) 0 else profile?.database ?: 0
+                val browserOptions = profile?.browser?.normalized() ?: ConnectionBrowserOptions()
+                browser.onConnected(
+                    clusterMode = clusterMode,
+                    initialDatabase = initialDatabase,
+                    browserOptions = browserOptions,
+                )
             }
             ConnectionState.Disconnected -> browser.onDisconnected()
             else -> Unit
@@ -117,6 +131,7 @@ fun ConnectionsWorkspace(
             },
             onOpenAddKey = browser::openAddKeyDialog,
             onSelectDatabase = browser::selectDatabase,
+            onKeyListViewChange = browser::setKeyListView,
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
         )
         KeyDetailScreen(

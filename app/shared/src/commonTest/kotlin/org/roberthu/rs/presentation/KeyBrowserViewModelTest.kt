@@ -4,7 +4,10 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.roberthu.rs.domain.ConnectionBrowserOptions
 import org.roberthu.rs.domain.CreateRedisKeyRequest
+import org.roberthu.rs.domain.DatabaseFilterMode
+import org.roberthu.rs.domain.KeyListViewMode
 import org.roberthu.rs.domain.KeyMetadata
 import org.roberthu.rs.domain.RedisDatabaseSummary
 import org.roberthu.rs.domain.RedisError
@@ -169,6 +172,92 @@ class KeyBrowserViewModelTest {
         assertEquals("fast:*", port.queries.last().pattern)
         assertFalse(viewModel.state.value.loading)
     }
+
+    @Test
+    fun onConnected_appliesBrowserOptions() = runTest {
+        val port = RecordingKeyBrowserPort()
+        val viewModel = KeyBrowserViewModel(port, FakeKeyCommandPort(), this)
+        val options = ConnectionBrowserOptions(
+            keyPattern = "session:*",
+            keySeparator = "/",
+            keyListView = KeyListViewMode.Flat,
+            keyLoadBatchSize = 500,
+            databaseFilterMode = DatabaseFilterMode.ShowSpecified,
+            databaseFilterValues = listOf(0, 1),
+        )
+
+        viewModel.onConnected(clusterMode = false, initialDatabase = 1, browserOptions = options)
+        advanceUntilIdle()
+
+        assertEquals("session:*", viewModel.state.value.pattern)
+        assertEquals(KeyListViewMode.Flat, viewModel.state.value.keyListView)
+        assertEquals("/", viewModel.state.value.keySeparator)
+        assertEquals(listOf(0, 1), viewModel.state.value.databases.map { it.index })
+        assertEquals(1, viewModel.state.value.selectedDatabase)
+        assertEquals(500, port.queries.last().countHint)
+    }
+
+    @Test
+    fun selectDatabase_ignoresFilteredDatabase() = runTest {
+        val port = RecordingKeyBrowserPort(
+            results = ArrayDeque(
+                listOf(
+                    Result.success(ScanPage(emptyList(), null)),
+                    Result.success(ScanPage(emptyList(), null)),
+                ),
+            ),
+        )
+        val viewModel = KeyBrowserViewModel(port, FakeKeyCommandPort(), this)
+        viewModel.onConnected(
+            clusterMode = false,
+            initialDatabase = 0,
+            browserOptions = ConnectionBrowserOptions(
+                databaseFilterMode = DatabaseFilterMode.HideSpecified,
+                databaseFilterValues = listOf(1),
+            ),
+        )
+        advanceUntilIdle()
+
+        viewModel.selectDatabase(1)
+        advanceUntilIdle()
+
+        assertEquals(0, viewModel.state.value.selectedDatabase)
+        assertEquals(1, port.selectDatabaseCalls.size)
+    }
+
+    @Test
+    fun filterDatabases_showSpecified_keepsOnlyListed() = runTest {
+        val port = RecordingKeyBrowserPort()
+        val viewModel = KeyBrowserViewModel(port, FakeKeyCommandPort(), this)
+
+        viewModel.onConnected(
+            clusterMode = false,
+            browserOptions = ConnectionBrowserOptions(
+                databaseFilterMode = DatabaseFilterMode.ShowSpecified,
+                databaseFilterValues = listOf(1),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf(1), viewModel.state.value.databases.map { it.index })
+    }
+
+    @Test
+    fun filterDatabases_hideSpecified_removesListed() = runTest {
+        val port = RecordingKeyBrowserPort()
+        val viewModel = KeyBrowserViewModel(port, FakeKeyCommandPort(), this)
+
+        viewModel.onConnected(
+            clusterMode = false,
+            browserOptions = ConnectionBrowserOptions(
+                databaseFilterMode = DatabaseFilterMode.HideSpecified,
+                databaseFilterValues = listOf(1),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf(0), viewModel.state.value.databases.map { it.index })
+    }
 }
 
 private class RecordingKeyBrowserPort(
@@ -178,6 +267,7 @@ private class RecordingKeyBrowserPort(
     private val blockScan: Boolean = false,
 ) : KeyBrowserPort {
     val queries = mutableListOf<ScanQuery>()
+    val selectDatabaseCalls = mutableListOf<Int>()
     var cancelled = false
     private val blocker = CompletableDeferred<Unit>()
 
@@ -200,7 +290,10 @@ private class RecordingKeyBrowserPort(
             ),
         )
 
-    override suspend fun selectDatabase(index: Int) = Result.success(Unit)
+    override suspend fun selectDatabase(index: Int): Result<Unit> {
+        selectDatabaseCalls += index
+        return Result.success(Unit)
+    }
 }
 
 private class SlowKeyBrowserPort(

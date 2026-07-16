@@ -7,10 +7,14 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import org.roberthu.rs.domain.ConnectionBrowserOptions
 import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.domain.ConnectionTagColor
+import org.roberthu.rs.domain.DatabaseFilterMode
 import org.roberthu.rs.domain.DeploymentMode
 import org.roberthu.rs.domain.HostPort
+import org.roberthu.rs.domain.KeyListViewMode
 import org.roberthu.rs.domain.SshAuthMethod
 import org.roberthu.rs.domain.SshTunnelOptions
 import org.roberthu.rs.domain.TimeoutOptions
@@ -135,10 +139,46 @@ private data class StoredTlsOptions(
 
 @Serializable
 private data class StoredTimeoutOptions(
-    val connectMs: Long = 5_000,
-    val commandMs: Long = 5_000,
+    val connectMs: Long = 60_000,
+    val commandMs: Long = 60_000,
     val reconnectMs: Long = 30_000,
 )
+
+@Serializable
+private data class StoredBrowserOptions(
+    val keyPattern: String = "*",
+    val keySeparator: String = ":",
+    val keyListView: String = KeyListViewMode.Tree.name,
+    val keyLoadBatchSize: Int = 10_000,
+    val databaseFilterMode: String = DatabaseFilterMode.ShowAll.name,
+    val databaseFilterValues: List<Int> = emptyList(),
+    val tagColor: String = ConnectionTagColor.None.name,
+) {
+    fun toDomain() = ConnectionBrowserOptions(
+        keyPattern = keyPattern,
+        keySeparator = keySeparator,
+        keyListView = runCatching { KeyListViewMode.valueOf(keyListView) }
+            .getOrDefault(KeyListViewMode.Tree),
+        keyLoadBatchSize = keyLoadBatchSize,
+        databaseFilterMode = runCatching { DatabaseFilterMode.valueOf(databaseFilterMode) }
+            .getOrDefault(DatabaseFilterMode.ShowAll),
+        databaseFilterValues = databaseFilterValues,
+        tagColor = runCatching { ConnectionTagColor.valueOf(tagColor) }
+            .getOrDefault(ConnectionTagColor.None),
+    )
+
+    companion object {
+        fun from(options: ConnectionBrowserOptions) = StoredBrowserOptions(
+            keyPattern = options.keyPattern,
+            keySeparator = options.keySeparator,
+            keyListView = options.keyListView.name,
+            keyLoadBatchSize = options.keyLoadBatchSize,
+            databaseFilterMode = options.databaseFilterMode.name,
+            databaseFilterValues = options.databaseFilterValues,
+            tagColor = options.tagColor.name,
+        )
+    }
+}
 
 @Serializable
 private data class StoredSshOptions(
@@ -171,6 +211,7 @@ private data class StoredProfile(
     val timeouts: StoredTimeoutOptions = StoredTimeoutOptions(),
     val clientName: String? = null,
     val ssh: StoredSshOptions = StoredSshOptions(),
+    val browser: StoredBrowserOptions = StoredBrowserOptions(),
     val groupId: String? = null,
 ) {
     fun toDomain() = ConnectionProfile(
@@ -201,6 +242,7 @@ private data class StoredProfile(
             privateKeyPassphrase = ssh.privateKeyPassphrase,
             connectTimeoutMs = ssh.connectTimeoutMs,
         ),
+        browser = browser.toDomain(),
         groupId = groupId,
     )
 
@@ -236,6 +278,7 @@ private data class StoredProfile(
                 privateKeyPassphrase = profile.ssh.privateKeyPassphrase.takeIf { rememberPassword },
                 connectTimeoutMs = profile.ssh.connectTimeoutMs,
             ),
+            browser = StoredBrowserOptions.from(profile.browser),
             groupId = profile.groupId,
         )
     }

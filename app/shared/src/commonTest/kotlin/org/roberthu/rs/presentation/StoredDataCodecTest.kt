@@ -1,10 +1,15 @@
 package org.roberthu.rs.presentation
 
+import org.roberthu.rs.domain.ConnectionBrowserOptions
 import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.domain.ConnectionTagColor
+import org.roberthu.rs.domain.DatabaseFilterMode
 import org.roberthu.rs.domain.DeploymentMode
+import org.roberthu.rs.domain.KeyListViewMode
 import org.roberthu.rs.domain.SshAuthMethod
 import org.roberthu.rs.domain.SshTunnelOptions
+import org.roberthu.rs.domain.TimeoutOptions
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -75,6 +80,52 @@ class StoredDataCodecTest {
         assertEquals(1, decoded.profiles.size)
         assertEquals("c1", decoded.profiles.single().id)
         assertTrue(decoded.groups.isEmpty())
+    }
+
+    @Test
+    fun legacyProfileWithoutBrowserFieldDecodesWithDefaults() {
+        val legacy = """
+            [{
+                "id":"c1",
+                "name":"Legacy",
+                "mode":"Standalone",
+                "host":"localhost",
+                "port":6379,
+                "database":0,
+                "timeouts":{"connectMs":5000,"commandMs":5000,"reconnectMs":30000}
+            }]
+        """.trimIndent()
+
+        val decoded = StoredDataCodec.decodeConnections(legacy).profiles.single()
+
+        assertEquals(ConnectionBrowserOptions(), decoded.browser)
+        // Legacy connect/command timeouts (pre-60s default) are preserved verbatim, not migrated.
+        assertEquals(TimeoutOptions(connectMs = 5000, commandMs = 5000, reconnectMs = 30_000), decoded.timeouts)
+    }
+
+    @Test
+    fun browserOptionsRoundTripThroughEncodeDecode() {
+        val profile = ConnectionProfile(
+            id = "c1",
+            name = "Local",
+            mode = DeploymentMode.Standalone,
+            host = "127.0.0.1",
+            browser = ConnectionBrowserOptions(
+                keyPattern = "session:*",
+                keySeparator = "/",
+                keyListView = KeyListViewMode.Flat,
+                keyLoadBatchSize = 500,
+                databaseFilterMode = DatabaseFilterMode.HideSpecified,
+                databaseFilterValues = listOf(0, 1, 2),
+                tagColor = ConnectionTagColor.Blue,
+            ),
+        )
+
+        val decoded = StoredDataCodec.decodeProfiles(
+            StoredDataCodec.encodeProfiles(listOf(profile), rememberPasswords = true),
+        ).single()
+
+        assertEquals(profile.browser, decoded.browser)
     }
 
     @Test

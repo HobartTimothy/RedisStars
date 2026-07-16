@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.ConnectionEditorMode
@@ -57,6 +58,7 @@ fun ConnectionEditorDialog(
     onTest: () -> Unit,
     onSave: () -> Unit,
     onParseUrl: (String) -> Unit,
+    groups: List<ConnectionGroup> = emptyList(),
     onPickSshPrivateKeyPath: () -> String? = { null },
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -106,7 +108,7 @@ fun ConnectionEditorDialog(
                         selected = state.selectedSection,
                         onSelect = onSelectSection,
                         modifier = Modifier
-                            .width(136.dp)
+                            .width(148.dp)
                             .fillMaxHeight()
                             .background(MaterialTheme.colorScheme.surfaceContainer),
                     )
@@ -141,16 +143,23 @@ fun ConnectionEditorDialog(
                                 form = state.form,
                                 fieldErrors = state.fieldErrors,
                                 onChange = { form -> onUpdateForm { form } },
-                                onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
+                                groups = groups,
                             )
                             ConnectionEditorSection.Advanced -> AdvancedConnectionSection(
                                 form = state.form,
                                 fieldErrors = state.fieldErrors,
                                 onChange = { form -> onUpdateForm { form } },
                             )
+                            ConnectionEditorSection.DatabaseAlias -> PlaceholderConnectionSection()
                             ConnectionEditorSection.Tls -> TlsConnectionSection(
                                 form = state.form,
                                 onChange = { form -> onUpdateForm { form } },
+                            )
+                            ConnectionEditorSection.Ssh -> SshConnectionSection(
+                                form = state.form,
+                                fieldErrors = state.fieldErrors,
+                                onChange = { form -> onUpdateForm { form } },
+                                onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
                             )
                             ConnectionEditorSection.Sentinel -> SentinelConnectionSection(
                                 form = state.form,
@@ -164,6 +173,7 @@ fun ConnectionEditorDialog(
                                 onChange = { form -> onUpdateForm { form } },
                                 newNodeId = { ConnectionFormState.newNodeId() },
                             )
+                            ConnectionEditorSection.NetworkProxy -> PlaceholderConnectionSection()
                         }
                     }
                 }
@@ -246,9 +256,12 @@ private fun SectionNavigation(
     val items = listOf(
         ConnectionEditorSection.General to (StringKeys.ConnectionEditor.SectionGeneral to "connection_editor_section_general"),
         ConnectionEditorSection.Advanced to (StringKeys.ConnectionEditor.SectionAdvanced to "connection_editor_section_advanced"),
+        ConnectionEditorSection.DatabaseAlias to (StringKeys.ConnectionEditor.SectionDatabaseAlias to "connection_editor_section_database_alias"),
         ConnectionEditorSection.Tls to (StringKeys.ConnectionEditor.SectionTls to "connection_editor_section_tls"),
+        ConnectionEditorSection.Ssh to (StringKeys.ConnectionEditor.SectionSsh to "connection_editor_section_ssh"),
         ConnectionEditorSection.Sentinel to (StringKeys.ConnectionEditor.SectionSentinel to "connection_editor_section_sentinel"),
         ConnectionEditorSection.Cluster to (StringKeys.ConnectionEditor.SectionCluster to "connection_editor_section_cluster"),
+        ConnectionEditorSection.NetworkProxy to (StringKeys.ConnectionEditor.SectionNetworkProxy to "connection_editor_section_network_proxy"),
     )
     Column(modifier = modifier.padding(vertical = 8.dp)) {
         items.forEach { (section, labelAndTag) ->

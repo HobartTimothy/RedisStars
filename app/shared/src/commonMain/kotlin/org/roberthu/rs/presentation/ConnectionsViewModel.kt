@@ -84,7 +84,7 @@ class ConnectionsViewModel(
         mutableState.update { it.copy(selectedGroupId = id) }
     }
 
-    fun beginCreate(groupId: String? = mutableState.value.selectedGroupId) {
+    fun beginCreate(groupId: String?) {
         val ids = mutableState.value.profiles.mapTo(mutableSetOf()) { it.id }
         var suffix = mutableState.value.profiles.size + 1
         while ("connection-$suffix" in ids) suffix++
@@ -260,11 +260,8 @@ class ConnectionsViewModel(
 
             is ConnectionFormConversionResult.Success -> {
                 val existing = mutableState.value.profiles.firstOrNull { it.id == editor.profileId }
-                val converted = when (editor.mode) {
-                    ConnectionEditorMode.Create ->
-                        conversion.profile.copy(groupId = editor.pendingGroupId ?: editor.form.groupId)
-                    ConnectionEditorMode.Edit -> conversion.profile
-                }
+                // Prefer the form's groupId so create/edit both honor the group dropdown.
+                val converted = conversion.profile
                 // Blank password/SSH secrets on edit keep the previously loaded values so a
                 // save after "test with typed password" never silently drops auth.
                 val profileToSave = preserveBlankSecrets(converted, existing)
@@ -491,8 +488,8 @@ class ConnectionsViewModel(
         if (previous.username != next.username) add("username")
         if (previous.password != next.password) add("password")
         if (previous.clientName != next.clientName) add("clientName")
-        if (previous.connectTimeoutMs != next.connectTimeoutMs) add("connectTimeoutMs")
-        if (previous.commandTimeoutMs != next.commandTimeoutMs) add("commandTimeoutMs")
+        if (previous.connectTimeoutSec != next.connectTimeoutSec) add("connectTimeoutSec")
+        if (previous.commandTimeoutSec != next.commandTimeoutSec) add("commandTimeoutSec")
         if (previous.reconnectTimeoutMs != next.reconnectTimeoutMs) add("reconnectTimeoutMs")
         if (previous.tlsEnabled != next.tlsEnabled) add("tlsEnabled")
         if (previous.verifyPeer != next.verifyPeer) add("verifyPeer")
@@ -511,5 +508,12 @@ class ConnectionsViewModel(
             add("sshPrivateKeyPassphrase")
         }
         if (previous.sshConnectTimeoutMs != next.sshConnectTimeoutMs) add("sshConnectTimeoutMs")
+        if (previous.keyPattern != next.keyPattern) add("keyPattern")
+        if (previous.keySeparator != next.keySeparator) add("keySeparator")
+        if (previous.keyListView != next.keyListView) add("keyListView")
+        if (previous.keyLoadBatchSize != next.keyLoadBatchSize) add("keyLoadBatchSize")
+        if (previous.databaseFilterMode != next.databaseFilterMode) add("databaseFilterMode")
+        if (previous.databaseFilterText != next.databaseFilterText) add("databaseFilterText")
+        if (previous.tagColor != next.tagColor) add("tagColor")
     }
 }

@@ -17,8 +17,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -50,6 +52,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import org.roberthu.rs.domain.KeyListViewMode
 import org.roberthu.rs.domain.RedisDatabaseSummary
 import org.roberthu.rs.domain.RedisKeySummary
 import org.roberthu.rs.i18n.StringKeys
@@ -69,6 +72,7 @@ fun KeyBrowserScreen(
     onSelect: (RedisKeySummary) -> Unit,
     onOpenAddKey: () -> Unit,
     onSelectDatabase: (Int) -> Unit,
+    onKeyListViewChange: (KeyListViewMode) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -90,6 +94,42 @@ fun KeyBrowserScreen(
                 style = MaterialTheme.typography.titleSmall,
             )
             Row {
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                    tooltip = {
+                        Text(
+                            if (state.keyListView == KeyListViewMode.Tree) {
+                                t(StringKeys.Keys.ViewFlat)
+                            } else {
+                                t(StringKeys.Keys.ViewTree)
+                            },
+                        )
+                    },
+                    state = rememberTooltipState(),
+                ) {
+                    IconButton(
+                        onClick = {
+                            onKeyListViewChange(
+                                if (state.keyListView == KeyListViewMode.Tree) {
+                                    KeyListViewMode.Flat
+                                } else {
+                                    KeyListViewMode.Tree
+                                },
+                            )
+                        },
+                        enabled = enabled,
+                        modifier = Modifier.testTag("keys_view_toggle"),
+                    ) {
+                        Icon(
+                            if (state.keyListView == KeyListViewMode.Tree) {
+                                Icons.Default.AccountTree
+                            } else {
+                                Icons.Default.List
+                            },
+                            contentDescription = t(StringKeys.Keys.ViewToggle),
+                        )
+                    }
+                }
                 TooltipBox(
                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
                     tooltip = { Text(t(StringKeys.Keys.Refresh)) },
@@ -192,14 +232,32 @@ fun KeyBrowserScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        val keyTree = remember(state.keys, state.keySeparator, state.keyListView) {
+            if (state.keyListView == KeyListViewMode.Tree) {
+                buildKeyTree(state.keys, state.keySeparator)
+            } else {
+                emptyList()
+            }
+        }
         LazyColumn(modifier = Modifier.weight(1f).testTag("key_list")) {
-            items(state.keys, key = { it.key }) { key ->
-                val selected = state.selectedKey?.key == key.key
-                KeyListRow(
-                    key = key,
-                    selected = selected,
-                    onSelect = { onSelect(key) },
-                )
+            if (state.keyListView == KeyListViewMode.Tree) {
+                item(key = "key_tree") {
+                    KeyTreeItems(
+                        nodes = keyTree,
+                        selectedKey = state.selectedKey,
+                        onSelect = onSelect,
+                        depth = 0,
+                    )
+                }
+            } else {
+                items(state.keys, key = { it.key }) { key ->
+                    val selected = state.selectedKey?.key == key.key
+                    KeyListRow(
+                        key = key,
+                        selected = selected,
+                        onSelect = { onSelect(key) },
+                    )
+                }
             }
             if (state.nextCursorToken != null) {
                 item {
@@ -226,10 +284,79 @@ fun KeyBrowserScreen(
 }
 
 @Composable
+private fun KeyTreeItems(
+    nodes: List<KeyTreeNode>,
+    selectedKey: RedisKeySummary?,
+    onSelect: (RedisKeySummary) -> Unit,
+    depth: Int,
+) {
+    nodes.forEach { node ->
+        when (node) {
+            is KeyTreeNode.Folder -> {
+                var expanded by remember(node.segment, depth) { mutableStateOf(true) }
+                KeyFolderRow(
+                    segment = node.segment,
+                    depth = depth,
+                    expanded = expanded,
+                    onToggle = { expanded = !expanded },
+                )
+                if (expanded) {
+                    KeyTreeItems(
+                        nodes = node.children,
+                        selectedKey = selectedKey,
+                        onSelect = onSelect,
+                        depth = depth + 1,
+                    )
+                }
+            }
+            is KeyTreeNode.Leaf -> {
+                val selected = selectedKey?.key == node.key.key
+                KeyListRow(
+                    key = node.key,
+                    selected = selected,
+                    depth = depth,
+                    onSelect = { onSelect(node.key) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun KeyFolderRow(
+    segment: String,
+    depth: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(start = (depth * 12).dp)
+            .testTag("key_folder_$segment"),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                if (expanded) "▾" else "▸",
+                style = MaterialTheme.typography.labelSmall,
+            )
+            Text(segment, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
 private fun KeyListRow(
     key: RedisKeySummary,
     selected: Boolean,
     onSelect: () -> Unit,
+    depth: Int = 0,
 ) {
     Surface(
         color = if (selected) {
@@ -239,6 +366,7 @@ private fun KeyListRow(
         },
         modifier = Modifier
             .fillMaxWidth()
+            .padding(start = (depth * 12).dp)
             .clickable(onClick = onSelect)
             .testTag("key_${key.key}"),
     ) {

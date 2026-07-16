@@ -78,6 +78,28 @@ class ConnectionProfileValidationTest {
     }
 
     @Test
+    fun timeoutOptionsDefaultsAreSixtySeconds() {
+        val timeouts = TimeoutOptions()
+
+        assertEquals(60_000, timeouts.connectMs)
+        assertEquals(60_000, timeouts.commandMs)
+        assertEquals(30_000, timeouts.reconnectMs)
+    }
+
+    @Test
+    fun connectionProfileDefaultBrowserOptionsMatchSpec() {
+        val browser = sampleStandalone().browser
+
+        assertEquals("*", browser.keyPattern)
+        assertEquals(":", browser.keySeparator)
+        assertEquals(KeyListViewMode.Tree, browser.keyListView)
+        assertEquals(10_000, browser.keyLoadBatchSize)
+        assertEquals(DatabaseFilterMode.ShowAll, browser.databaseFilterMode)
+        assertTrue(browser.databaseFilterValues.isEmpty())
+        assertEquals(ConnectionTagColor.None, browser.tagColor)
+    }
+
+    @Test
     fun timeoutsMustBePositive() {
         val profile = sampleStandalone().copy(
             timeouts = TimeoutOptions(connectMs = 0, commandMs = -1, reconnectMs = 0),

@@ -27,7 +27,7 @@ import kotlin.test.assertTrue
 class ConnectionsViewModelTest {
     @Test
     fun beginCreate_opensEditorWithDefaults() = vmTest { viewModel, _, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
 
         val editor = assertNotNull(viewModel.state.value.editor)
@@ -37,8 +37,8 @@ class ConnectionsViewModelTest {
         assertEquals("localhost", editor.form.host)
         assertEquals("6379", editor.form.port)
         assertEquals("0", editor.form.database)
-        assertEquals("5000", editor.form.connectTimeoutMs)
-        assertEquals("5000", editor.form.commandTimeoutMs)
+        assertEquals("60", editor.form.connectTimeoutSec)
+        assertEquals("60", editor.form.commandTimeoutSec)
         assertEquals("30000", editor.form.reconnectTimeoutMs)
         assertFalse(editor.form.tlsEnabled)
         assertTrue(editor.form.verifyPeer)
@@ -63,7 +63,7 @@ class ConnectionsViewModelTest {
 
     @Test
     fun updateEditorForm_marksDirty() = vmTest { viewModel, _, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
 
         viewModel.updateEditorForm { it.copy(name = "Changed") }
@@ -74,7 +74,7 @@ class ConnectionsViewModelTest {
 
     @Test
     fun requestCloseEditor_closesImmediatelyWhenClean() = vmTest { viewModel, _, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
 
         viewModel.requestCloseEditor()
@@ -85,7 +85,7 @@ class ConnectionsViewModelTest {
 
     @Test
     fun requestCloseEditor_showsDiscardConfirmationWhenDirty() = vmTest { viewModel, _, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
         viewModel.updateEditorForm { it.copy(name = "Dirty") }
 
@@ -98,7 +98,7 @@ class ConnectionsViewModelTest {
 
     @Test
     fun testEditor_successSetsFlag() = vmTest { viewModel, _, port ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
 
         viewModel.testEditor()
@@ -114,7 +114,7 @@ class ConnectionsViewModelTest {
     fun testEditor_failureKeepsInputAndShowsError() = vmTest(
         port = FakeRedisConnectionPort(testResult = Result.failure(RedisError.Network("offline"))),
     ) { viewModel, _, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
         viewModel.updateEditorForm { it.copy(name = "Keep me") }
 
@@ -129,7 +129,7 @@ class ConnectionsViewModelTest {
 
     @Test
     fun testEditor_doesNotSaveProfile() = vmTest { viewModel, store, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
 
         viewModel.testEditor()
@@ -141,7 +141,7 @@ class ConnectionsViewModelTest {
 
     @Test
     fun saveEditor_successClosesDialog() = vmTest { viewModel, store, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
         viewModel.updateEditorForm { it.copy(name = "Saved") }
 
@@ -158,7 +158,7 @@ class ConnectionsViewModelTest {
     fun saveEditor_failureKeepsDialogAndInput() = vmTest(
         store = FakeConnectionProfileStore(failUpsert = true),
     ) { viewModel, store, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
         viewModel.updateEditorForm { it.copy(name = "Keep open") }
 
@@ -173,7 +173,7 @@ class ConnectionsViewModelTest {
 
     @Test
     fun saveEditor_sentinelPersistsNodes() = vmTest { viewModel, store, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
         viewModel.updateEditorForm {
             it.copy(
@@ -195,7 +195,7 @@ class ConnectionsViewModelTest {
 
     @Test
     fun saveEditor_clusterPersistsSeedsAndDatabaseZero() = vmTest { viewModel, store, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
         viewModel.updateEditorForm {
             it.copy(
@@ -232,10 +232,53 @@ class ConnectionsViewModelTest {
     }
 
     @Test
+    fun edit_defaultsToCurrentGroupAndSaveUpdatesGroup() = vmTest(
+        store = FakeConnectionProfileStore(
+            profiles = mutableListOf(
+                standaloneProfile("c1", "Cloud").copy(groupId = "g1"),
+            ),
+            groups = mutableListOf(
+                ConnectionGroup(id = "g1", name = "Dev"),
+                ConnectionGroup(id = "g2", name = "Prod"),
+            ),
+        ),
+    ) { viewModel, store, _ ->
+        viewModel.edit(store.profiles.single())
+        advanceUntilIdle()
+
+        assertEquals("g1", viewModel.state.value.editor!!.form.groupId)
+
+        viewModel.updateEditorForm { it.copy(groupId = "g2") }
+        viewModel.saveEditor()
+        advanceUntilIdle()
+
+        assertEquals("g2", store.profiles.single().groupId)
+        assertNull(viewModel.state.value.editor)
+    }
+
+    @Test
+    fun edit_canMoveConnectionToUngrouped() = vmTest(
+        store = FakeConnectionProfileStore(
+            profiles = mutableListOf(
+                standaloneProfile("c1", "Cloud").copy(groupId = "g1"),
+            ),
+            groups = mutableListOf(ConnectionGroup(id = "g1", name = "Dev")),
+        ),
+    ) { viewModel, store, _ ->
+        viewModel.edit(store.profiles.single())
+        advanceUntilIdle()
+        viewModel.updateEditorForm { it.copy(groupId = null) }
+        viewModel.saveEditor()
+        advanceUntilIdle()
+
+        assertNull(store.profiles.single().groupId)
+    }
+
+    @Test
     fun saveEditor_keepsPasswordInUiWhenStoreStripsSecrets() = vmTest(
         store = FakeConnectionProfileStore(stripSecretsOnUpsert = true),
     ) { viewModel, store, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
         viewModel.updateEditorForm {
             it.copy(name = "Cloud", host = "redis.example", password = "s3cret")
@@ -269,7 +312,7 @@ class ConnectionsViewModelTest {
 
     @Test
     fun confirmDiscardEditor_closesDialog() = vmTest { viewModel, _, _ ->
-        viewModel.beginCreate()
+        viewModel.beginCreate(null)
         advanceUntilIdle()
         viewModel.updateEditorForm { it.copy(name = "Dirty") }
         viewModel.requestCloseEditor()
@@ -307,6 +350,35 @@ class ConnectionsViewModelTest {
         val editor = assertNotNull(viewModel.state.value.editor)
         assertEquals("g1", editor.pendingGroupId)
         assertEquals("g1", editor.form.groupId)
+    }
+
+    @Test
+    fun beginCreate_null_setsGroupIdNull() = vmTest(
+        store = FakeConnectionProfileStore(
+            groups = mutableListOf(ConnectionGroup(id = "g1", name = "Dev")),
+        ),
+    ) { viewModel, _, _ ->
+        viewModel.selectGroup("g1")
+        viewModel.beginCreate(null)
+        advanceUntilIdle()
+
+        val editor = assertNotNull(viewModel.state.value.editor)
+        assertNull(editor.form.groupId)
+        assertNull(editor.pendingGroupId)
+    }
+
+    @Test
+    fun beginCreate_withExplicitGroupId_setsGroupId() = vmTest(
+        store = FakeConnectionProfileStore(
+            groups = mutableListOf(ConnectionGroup(id = "g1", name = "Dev")),
+        ),
+    ) { viewModel, _, _ ->
+        viewModel.beginCreate("g1")
+        advanceUntilIdle()
+
+        val editor = assertNotNull(viewModel.state.value.editor)
+        assertEquals("g1", editor.form.groupId)
+        assertEquals("g1", editor.pendingGroupId)
     }
 }
 

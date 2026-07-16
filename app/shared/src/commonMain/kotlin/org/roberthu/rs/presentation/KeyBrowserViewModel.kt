@@ -8,14 +8,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.roberthu.rs.domain.ConnectionBrowserOptions
 import org.roberthu.rs.domain.CreateRedisKeyRequest
 import org.roberthu.rs.domain.DeploymentMode
+import org.roberthu.rs.domain.KeyListViewMode
 import org.roberthu.rs.domain.RedisDatabaseSummary
 import org.roberthu.rs.domain.RedisError
 import org.roberthu.rs.domain.RedisKeyPayload
 import org.roberthu.rs.domain.RedisKeySummary
 import org.roberthu.rs.domain.RedisKeyType
 import org.roberthu.rs.domain.ScanQuery
+import org.roberthu.rs.domain.filterDatabases
+import org.roberthu.rs.domain.normalized
 import org.roberthu.rs.i18n.AppI18n
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.ValidationI18n
@@ -55,6 +59,9 @@ data class KeyBrowserUiState(
     val databases: List<RedisDatabaseSummary> = emptyList(),
     val databasesLoading: Boolean = false,
     val clusterMode: Boolean = false,
+    val keyListView: KeyListViewMode = KeyListViewMode.Tree,
+    val keySeparator: String = ":",
+    val browserOptions: ConnectionBrowserOptions = ConnectionBrowserOptions(),
     val addKeyDialog: AddKeyDialogState? = null,
     val scanRequestId: Long = 0,
     val lastCreatedKey: RedisKeySummary? = null,
@@ -82,19 +89,31 @@ class KeyBrowserViewModel(
         mutableState.update { it.copy(selectedKey = key) }
     }
 
-    fun onConnected(clusterMode: Boolean, initialDatabase: Int = 0) {
+    fun onConnected(
+        clusterMode: Boolean,
+        initialDatabase: Int = 0,
+        browserOptions: ConnectionBrowserOptions = ConnectionBrowserOptions(),
+    ) {
+        val normalized = browserOptions.normalized()
         mutableState.update {
             it.copy(
                 clusterMode = clusterMode,
                 selectedDatabase = initialDatabase.coerceAtLeast(0),
+                pattern = normalized.keyPattern,
+                keyListView = normalized.keyListView,
+                keySeparator = normalized.keySeparator,
+                browserOptions = normalized,
                 lastCreatedKey = null,
+                selectedKey = null,
+                keys = emptyList(),
+                nextCursorToken = null,
             )
         }
-        loadDatabases()
-        scope.launch {
-            browseKeys.selectDatabase(initialDatabase.coerceAtLeast(0))
-            refresh()
-        }
+        loadDatabases(andScan = true)
+    }
+
+    fun setKeyListView(mode: KeyListViewMode) {
+        mutableState.update { it.copy(keyListView = mode) }
     }
 
     fun onDisconnected() {
@@ -104,6 +123,7 @@ class KeyBrowserViewModel(
 
     fun selectDatabase(index: Int) {
         if (mutableState.value.clusterMode && index != 0) return
+        if (mutableState.value.databases.none { it.index == index }) return
         mutableState.update {
             it.copy(
                 selectedDatabase = index,
@@ -262,12 +282,29 @@ class KeyBrowserViewModel(
         mutableState.update { it.copy(loading = false) }
     }
 
-    private fun loadDatabases() {
+    private fun loadDatabases(andScan: Boolean = false) {
         mutableState.update { it.copy(databasesLoading = true) }
         scope.launch {
             browseKeys.listDatabases()
-                .onSuccess { databases ->
-                    mutableState.update { it.copy(databases = databases, databasesLoading = false) }
+                .onSuccess { all ->
+                    val filtered = mutableState.value.browserOptions.filterDatabases(all)
+                    val currentDb = mutableState.value.selectedDatabase
+                    val validDb = if (filtered.any { it.index == currentDb }) {
+                        currentDb
+                    } else {
+                        filtered.firstOrNull()?.index ?: 0
+                    }
+                    mutableState.update {
+                        it.copy(
+                            databases = filtered,
+                            databasesLoading = false,
+                            selectedDatabase = validDb,
+                        )
+                    }
+                    if (andScan || validDb != currentDb) {
+                        browseKeys.selectDatabase(validDb)
+                        refresh()
+                    }
                 }
                 .onFailure { error ->
                     mutableState.update {
@@ -286,6 +323,7 @@ class KeyBrowserViewModel(
         val requestId = browseKeys.currentRequestId()
         val pattern = mutableState.value.pattern.ifBlank { "*" }
         val database = mutableState.value.selectedDatabase
+        val countHint = mutableState.value.browserOptions.keyLoadBatchSize.coerceIn(1, 10_000)
         mutableState.update {
             it.copy(
                 loading = true,
@@ -303,6 +341,7 @@ class KeyBrowserViewModel(
                         database = database,
                         pattern = pattern,
                         cursorToken = cursor,
+                        countHint = countHint,
                     ),
                 )
                     .onSuccess { page ->

@@ -1,12 +1,18 @@
 package org.roberthu.rs.presentation
 
+import org.roberthu.rs.domain.ConnectionBrowserOptions
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.domain.ConnectionTagColor
+import org.roberthu.rs.domain.DatabaseFilterMode
+import org.roberthu.rs.domain.DatabaseIndexListParser
 import org.roberthu.rs.domain.DeploymentMode
 import org.roberthu.rs.domain.HostPort
+import org.roberthu.rs.domain.KeyListViewMode
 import org.roberthu.rs.domain.SshAuthMethod
 import org.roberthu.rs.domain.SshTunnelOptions
 import org.roberthu.rs.domain.TimeoutOptions
 import org.roberthu.rs.domain.TlsOptions
+import org.roberthu.rs.domain.normalized
 import org.roberthu.rs.i18n.AppI18n
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.ValidationI18n
@@ -19,9 +25,12 @@ enum class ConnectionEditorMode {
 enum class ConnectionEditorSection {
     General,
     Advanced,
+    DatabaseAlias,
     Tls,
+    Ssh,
     Sentinel,
     Cluster,
+    NetworkProxy,
 }
 
 data class HostPortFormState(
@@ -39,9 +48,9 @@ data class ConnectionFormState(
     val username: String,
     val password: String,
     val clientName: String,
-    val connectTimeoutMs: String,
-    val commandTimeoutMs: String,
-    val reconnectTimeoutMs: String,
+    val connectTimeoutSec: String = "60",
+    val commandTimeoutSec: String = "60",
+    val reconnectTimeoutMs: String = "30000",
     val tlsEnabled: Boolean,
     val verifyPeer: Boolean,
     val masterName: String,
@@ -57,6 +66,14 @@ data class ConnectionFormState(
     val sshPrivateKeyPath: String = "",
     val sshPrivateKeyPassphrase: String = "",
     val sshConnectTimeoutMs: String = "10000",
+    val keyPattern: String = "*",
+    val keySeparator: String = ":",
+    val keyListView: KeyListViewMode = KeyListViewMode.Tree,
+    val keyLoadBatchSize: String = "10000",
+    val databaseFilterMode: DatabaseFilterMode = DatabaseFilterMode.ShowAll,
+    /** Raw "0,1,3-5" text; parsed via [org.roberthu.rs.domain.DatabaseIndexListParser] on submit. */
+    val databaseFilterText: String = "",
+    val tagColor: ConnectionTagColor = ConnectionTagColor.None,
     val groupId: String? = null,
 ) {
     fun toConnectionProfile(id: String): ConnectionFormConversionResult {
@@ -71,17 +88,21 @@ data class ConnectionFormState(
             else -> null
         }
         val databaseValue = 0
-        val connectTimeout = parsePositiveLong(
-            connectTimeoutMs,
-            "connectTimeoutMs",
-            AppI18n.t(StringKeys.ConnectionEditor.ConnectTimeoutLabel),
-            fieldErrors,
+        val connectTimeoutSecValue = parseIntInRange(
+            connectTimeoutSec,
+            "connectTimeoutSec",
+            AppI18n.t(StringKeys.ConnectionEditor.ConnectTimeoutSecLabel),
+            min = 1,
+            max = 3600,
+            fieldErrors = fieldErrors,
         )
-        val commandTimeout = parsePositiveLong(
-            commandTimeoutMs,
-            "commandTimeoutMs",
-            AppI18n.t(StringKeys.ConnectionEditor.CommandTimeoutLabel),
-            fieldErrors,
+        val commandTimeoutSecValue = parseIntInRange(
+            commandTimeoutSec,
+            "commandTimeoutSec",
+            AppI18n.t(StringKeys.ConnectionEditor.CommandTimeoutSecLabel),
+            min = 1,
+            max = 3600,
+            fieldErrors = fieldErrors,
         )
         val reconnectTimeout = parsePositiveLong(
             reconnectTimeoutMs,
@@ -89,6 +110,33 @@ data class ConnectionFormState(
             AppI18n.t(StringKeys.ConnectionEditor.ReconnectTimeoutLabel),
             fieldErrors,
         )
+        val keyLoadBatchSizeValue = parseIntInRange(
+            keyLoadBatchSize,
+            "keyLoadBatchSize",
+            AppI18n.t(StringKeys.ConnectionEditor.KeyLoadBatchSizeLabel),
+            min = 1,
+            max = 100_000,
+            fieldErrors = fieldErrors,
+        )
+        val databaseFilterValues = when (databaseFilterMode) {
+            DatabaseFilterMode.ShowAll -> emptyList()
+            else -> {
+                DatabaseIndexListParser.parse(databaseFilterText).fold(
+                    onSuccess = { parsed ->
+                        if (databaseFilterMode == DatabaseFilterMode.ShowSpecified && parsed.isEmpty()) {
+                            fieldErrors["databaseFilterText"] =
+                                AppI18n.t(StringKeys.Validation.DatabaseFilterRequired)
+                        }
+                        parsed
+                    },
+                    onFailure = {
+                        fieldErrors["databaseFilterText"] =
+                            AppI18n.t(StringKeys.Validation.DatabaseFilterInvalid)
+                        emptyList()
+                    },
+                )
+            }
+        }
 
         val sentinel = when (deploymentMode) {
             DeploymentMode.Sentinel -> parseHostPortList(
@@ -167,11 +215,20 @@ data class ConnectionFormState(
             password = password.ifBlank { null },
             tls = TlsOptions(enabled = tlsEnabled, verifyPeer = verifyPeer),
             timeouts = TimeoutOptions(
-                connectMs = connectTimeout!!,
-                commandMs = commandTimeout!!,
+                connectMs = connectTimeoutSecValue!!.toLong() * 1000L,
+                commandMs = commandTimeoutSecValue!!.toLong() * 1000L,
                 reconnectMs = reconnectTimeout!!,
             ),
             clientName = clientName.trim().ifBlank { null },
+            browser = ConnectionBrowserOptions(
+                keyPattern = keyPattern,
+                keySeparator = keySeparator,
+                keyListView = keyListView,
+                keyLoadBatchSize = keyLoadBatchSizeValue!!,
+                databaseFilterMode = databaseFilterMode,
+                databaseFilterValues = databaseFilterValues,
+                tagColor = tagColor,
+            ).normalized(),
             ssh = if (sshEnabledEffective) {
                 SshTunnelOptions(
                     enabled = true,
@@ -213,8 +270,8 @@ data class ConnectionFormState(
             username = "",
             password = "",
             clientName = "",
-            connectTimeoutMs = "5000",
-            commandTimeoutMs = "5000",
+            connectTimeoutSec = "60",
+            commandTimeoutSec = "60",
             reconnectTimeoutMs = "30000",
             tlsEnabled = false,
             verifyPeer = true,
@@ -231,6 +288,13 @@ data class ConnectionFormState(
             sshPrivateKeyPath = "",
             sshPrivateKeyPassphrase = "",
             sshConnectTimeoutMs = "10000",
+            keyPattern = "*",
+            keySeparator = ":",
+            keyListView = KeyListViewMode.Tree,
+            keyLoadBatchSize = "10000",
+            databaseFilterMode = DatabaseFilterMode.ShowAll,
+            databaseFilterText = "",
+            tagColor = ConnectionTagColor.None,
         )
 
         fun from(profile: ConnectionProfile): ConnectionFormState = ConnectionFormState(
@@ -242,8 +306,8 @@ data class ConnectionFormState(
             username = profile.username.orEmpty(),
             password = profile.password.orEmpty(),
             clientName = profile.clientName.orEmpty(),
-            connectTimeoutMs = profile.timeouts.connectMs.toString(),
-            commandTimeoutMs = profile.timeouts.commandMs.toString(),
+            connectTimeoutSec = (profile.timeouts.connectMs / 1000L).toString(),
+            commandTimeoutSec = (profile.timeouts.commandMs / 1000L).toString(),
             reconnectTimeoutMs = profile.timeouts.reconnectMs.toString(),
             tlsEnabled = profile.tls.enabled,
             verifyPeer = profile.tls.verifyPeer,
@@ -264,6 +328,13 @@ data class ConnectionFormState(
             sshPrivateKeyPath = profile.ssh.privateKeyPath.orEmpty(),
             sshPrivateKeyPassphrase = profile.ssh.privateKeyPassphrase.orEmpty(),
             sshConnectTimeoutMs = profile.ssh.connectTimeoutMs.toString(),
+            keyPattern = profile.browser.keyPattern,
+            keySeparator = profile.browser.keySeparator,
+            keyListView = profile.browser.keyListView,
+            keyLoadBatchSize = profile.browser.keyLoadBatchSize.toString(),
+            databaseFilterMode = profile.browser.databaseFilterMode,
+            databaseFilterText = DatabaseIndexListParser.format(profile.browser.databaseFilterValues),
+            tagColor = profile.browser.tagColor,
             groupId = profile.groupId,
         )
 
@@ -341,6 +412,30 @@ private fun parsePort(
     }
     if (value !in 1..65535) {
         fieldErrors[key] = AppI18n.t(StringKeys.Validation.PortRange)
+        return null
+    }
+    return value
+}
+
+private fun parseIntInRange(
+    raw: String,
+    key: String,
+    label: String,
+    min: Int,
+    max: Int,
+    fieldErrors: MutableMap<String, String>,
+): Int? {
+    if (raw.isBlank()) {
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.LabelRequired, label)
+        return null
+    }
+    val value = raw.toIntOrNull()
+    if (value == null) {
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.LabelInvalidNumber, label)
+        return null
+    }
+    if (value !in min..max) {
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.LabelOutOfRange, label, min, max)
         return null
     }
     return value

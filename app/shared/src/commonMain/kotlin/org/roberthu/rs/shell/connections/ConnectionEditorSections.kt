@@ -1,13 +1,26 @@
 package org.roberthu.rs.shell.connections
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,26 +39,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import org.roberthu.rs.domain.ConnectionTagColor
+import org.roberthu.rs.domain.ConnectionGroup
+import org.roberthu.rs.domain.DatabaseFilterMode
 import org.roberthu.rs.domain.DeploymentMode
+import org.roberthu.rs.domain.KeyListViewMode
 import org.roberthu.rs.domain.SshAuthMethod
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.ConnectionFormState
 import org.roberthu.rs.presentation.HostPortFormState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GeneralConnectionSection(
     form: ConnectionFormState,
     fieldErrors: Map<String, String>,
     onChange: (ConnectionFormState) -> Unit,
-    onPickSshPrivateKeyPath: () -> String? = { null },
+    groups: List<ConnectionGroup> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
+    var groupExpanded by remember { mutableStateOf(false) }
+    val sortedGroups = remember(groups) { groups.sortedBy { it.order } }
+    val selectedGroupLabel = sortedGroups.firstOrNull { it.id == form.groupId }?.name
+        ?: t(StringKeys.ConnectionEditor.RootGroup)
     val modes = listOf(
         DeploymentMode.Standalone to StringKeys.ConnectionEditor.ModeStandalone,
         DeploymentMode.Sentinel to StringKeys.ConnectionEditor.ModeSentinel,
@@ -67,6 +90,49 @@ fun GeneralConnectionSection(
                 .fillMaxWidth()
                 .testTag("connection_editor_name"),
         )
+
+        ExposedDropdownMenuBox(
+            expanded = groupExpanded,
+            onExpandedChange = { groupExpanded = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("connection_editor_group"),
+        ) {
+            OutlinedTextField(
+                value = selectedGroupLabel,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(t(StringKeys.ConnectionEditor.GroupLabel)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(groupExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+                    .testTag("connection_editor_group_field"),
+            )
+            ExposedDropdownMenu(
+                expanded = groupExpanded,
+                onDismissRequest = { groupExpanded = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(t(StringKeys.ConnectionEditor.RootGroup)) },
+                    onClick = {
+                        groupExpanded = false
+                        onChange(form.copy(groupId = null))
+                    },
+                    modifier = Modifier.testTag("connection_editor_group_root"),
+                )
+                sortedGroups.forEach { group ->
+                    DropdownMenuItem(
+                        text = { Text(group.name) },
+                        onClick = {
+                            groupExpanded = false
+                            onChange(form.copy(groupId = group.id))
+                        },
+                        modifier = Modifier.testTag("connection_editor_group_${group.id}"),
+                    )
+                }
+            }
+        }
 
         Text(t(StringKeys.ConnectionEditor.DeploymentModeLabel), style = MaterialTheme.typography.labelLarge)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -159,28 +225,50 @@ fun GeneralConnectionSection(
                 .fillMaxWidth()
                 .testTag("connection_editor_password"),
         )
+    }
+}
 
-        if (form.deploymentMode == DeploymentMode.Standalone) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(t(StringKeys.ConnectionEditor.SshTunnelToggle), modifier = Modifier.weight(1f))
-                Switch(
-                    checked = form.sshEnabled,
-                    onCheckedChange = { onChange(form.copy(sshEnabled = it)) },
-                    modifier = Modifier.testTag("connection_editor_ssh_enabled"),
-                )
-            }
+@Composable
+fun SshConnectionSection(
+    form: ConnectionFormState,
+    fieldErrors: Map<String, String>,
+    onChange: (ConnectionFormState) -> Unit,
+    onPickSshPrivateKeyPath: () -> String? = { null },
+    modifier: Modifier = Modifier,
+) {
+    val standalone = form.deploymentMode == DeploymentMode.Standalone
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (!standalone) {
+            Text(
+                t(StringKeys.ConnectionEditor.SshStandaloneHint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@Column
+        }
 
-            if (form.sshEnabled) {
-                SshTunnelSection(
-                    form = form,
-                    fieldErrors = fieldErrors,
-                    onChange = onChange,
-                    onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(t(StringKeys.ConnectionEditor.SshTunnelToggle), modifier = Modifier.weight(1f))
+            Switch(
+                checked = form.sshEnabled,
+                onCheckedChange = { onChange(form.copy(sshEnabled = it)) },
+                modifier = Modifier.testTag("connection_editor_ssh_enabled"),
+            )
+        }
+
+        if (form.sshEnabled) {
+            SshTunnelSection(
+                form = form,
+                fieldErrors = fieldErrors,
+                onChange = onChange,
+                onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
+            )
         }
     }
 }
@@ -377,41 +465,146 @@ fun AdvancedConnectionSection(
     onChange: (ConnectionFormState) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val keyListViews = listOf(
+        KeyListViewMode.Tree to StringKeys.ConnectionEditor.KeyListViewTree,
+        KeyListViewMode.Flat to StringKeys.ConnectionEditor.KeyListViewFlat,
+    )
+    val databaseFilterModes = listOf(
+        DatabaseFilterMode.ShowAll to StringKeys.ConnectionEditor.DatabaseFilterShowAll,
+        DatabaseFilterMode.ShowSpecified to StringKeys.ConnectionEditor.DatabaseFilterShowSpecified,
+        DatabaseFilterMode.HideSpecified to StringKeys.ConnectionEditor.DatabaseFilterHideSpecified,
+    )
+    val showDatabaseFilterText = form.databaseFilterMode != DatabaseFilterMode.ShowAll
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        OutlinedTextField(
-            value = form.clientName,
-            onValueChange = { onChange(form.copy(clientName = it)) },
-            label = { Text(t(StringKeys.ConnectionEditor.ClientNameLabel)) },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("connection_editor_client_name"),
+        AdaptiveTwoColumnRow(
+            left = {
+                LabeledTextField(
+                    label = t(StringKeys.ConnectionEditor.KeyPatternLabel),
+                    value = form.keyPattern,
+                    onValueChange = { onChange(form.copy(keyPattern = it)) },
+                    testTag = "connection_editor_key_pattern",
+                )
+            },
+            right = {
+                LabeledTextField(
+                    label = t(StringKeys.ConnectionEditor.KeySeparatorLabel),
+                    value = form.keySeparator,
+                    onValueChange = { onChange(form.copy(keySeparator = it)) },
+                    testTag = "connection_editor_key_separator",
+                )
+            },
         )
-        TimeoutField(
-            value = form.connectTimeoutMs,
-            label = t(StringKeys.ConnectionEditor.ConnectTimeoutLabel),
-            error = fieldErrors["connectTimeoutMs"],
-            testTag = "connection_editor_connect_timeout",
-            onValueChange = { onChange(form.copy(connectTimeoutMs = it)) },
+
+        AdaptiveTwoColumnRow(
+            left = {
+                LabeledTextField(
+                    label = t(StringKeys.ConnectionEditor.ConnectTimeoutSecLabel),
+                    value = form.connectTimeoutSec,
+                    onValueChange = { onChange(form.copy(connectTimeoutSec = it)) },
+                    error = fieldErrors["connectTimeoutSec"],
+                    testTag = "connection_editor_connect_timeout",
+                    suffix = t(StringKeys.ConnectionEditor.SecondsSuffix),
+                )
+            },
+            right = {
+                LabeledTextField(
+                    label = t(StringKeys.ConnectionEditor.CommandTimeoutSecLabel),
+                    value = form.commandTimeoutSec,
+                    onValueChange = { onChange(form.copy(commandTimeoutSec = it)) },
+                    error = fieldErrors["commandTimeoutSec"],
+                    testTag = "connection_editor_command_timeout",
+                    suffix = t(StringKeys.ConnectionEditor.SecondsSuffix),
+                )
+            },
         )
-        TimeoutField(
-            value = form.commandTimeoutMs,
-            label = t(StringKeys.ConnectionEditor.CommandTimeoutLabel),
-            error = fieldErrors["commandTimeoutMs"],
-            testTag = "connection_editor_command_timeout",
-            onValueChange = { onChange(form.copy(commandTimeoutMs = it)) },
+
+        AdaptiveTwoColumnRow(
+            left = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        t(StringKeys.ConnectionEditor.KeyListViewLabel),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        keyListViews.forEachIndexed { index, (mode, labelKey) ->
+                            SegmentedButton(
+                                selected = form.keyListView == mode,
+                                onClick = { onChange(form.copy(keyListView = mode)) },
+                                shape = SegmentedButtonDefaults.itemShape(index, keyListViews.size),
+                                modifier = Modifier.testTag(
+                                    "connection_editor_key_list_view_${mode.name.lowercase()}",
+                                ),
+                            ) {
+                                Text(t(labelKey))
+                            }
+                        }
+                    }
+                }
+            },
+            right = {
+                LabeledTextField(
+                    label = t(StringKeys.ConnectionEditor.KeyLoadBatchSizeLabel),
+                    value = form.keyLoadBatchSize,
+                    onValueChange = { onChange(form.copy(keyLoadBatchSize = it)) },
+                    error = fieldErrors["keyLoadBatchSize"],
+                    testTag = "connection_editor_key_load_batch_size",
+                )
+            },
         )
-        TimeoutField(
-            value = form.reconnectTimeoutMs,
-            label = t(StringKeys.ConnectionEditor.ReconnectTimeoutLabel),
-            error = fieldErrors["reconnectTimeoutMs"],
-            testTag = "connection_editor_reconnect_timeout",
-            onValueChange = { onChange(form.copy(reconnectTimeoutMs = it)) },
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                t(StringKeys.ConnectionEditor.DatabaseFilterModeLabel),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                databaseFilterModes.forEachIndexed { index, (mode, labelKey) ->
+                    SegmentedButton(
+                        selected = form.databaseFilterMode == mode,
+                        onClick = { onChange(form.copy(databaseFilterMode = mode)) },
+                        shape = SegmentedButtonDefaults.itemShape(index, databaseFilterModes.size),
+                        modifier = Modifier.testTag(
+                            "connection_editor_database_filter_${mode.name.lowercase()}",
+                        ),
+                    ) {
+                        Text(t(labelKey))
+                    }
+                }
+            }
+        }
+
+        if (showDatabaseFilterText) {
+            LabeledTextField(
+                label = t(StringKeys.ConnectionEditor.DatabaseFilterTextLabel),
+                value = form.databaseFilterText,
+                onValueChange = { onChange(form.copy(databaseFilterText = it)) },
+                error = fieldErrors["databaseFilterText"],
+                testTag = "connection_editor_database_filter_text",
+                placeholder = t(StringKeys.ConnectionEditor.DatabaseFilterTextPlaceholder),
+            )
+        }
+
+        TagColorSelector(
+            selected = form.tagColor,
+            onSelect = { onChange(form.copy(tagColor = it)) },
         )
     }
+}
+
+@Composable
+fun PlaceholderConnectionSection(
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = t(StringKeys.ConnectionEditor.ComingSoon),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -543,22 +736,146 @@ fun ClusterConnectionSection(
 }
 
 @Composable
-private fun TimeoutField(
-    value: String,
-    label: String,
-    error: String?,
-    testTag: String,
-    onValueChange: (String) -> Unit,
+private fun AdaptiveTwoColumnRow(
+    left: @Composable () -> Unit,
+    right: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
-        isError = error != null,
-        supportingText = error?.let { { Text(it) } },
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(testTag),
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        if (maxWidth >= 480.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) { left() }
+                Column(modifier = Modifier.weight(1f)) { right() }
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                left()
+                right()
+            }
+        }
+    }
+}
+
+@Composable
+private fun LabeledTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier,
+    error: String? = null,
+    placeholder: String? = null,
+    suffix: String? = null,
+    singleLine: Boolean = true,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = singleLine,
+            isError = error != null,
+            supportingText = error?.let { { Text(it) } },
+            placeholder = placeholder?.let { { Text(it) } },
+            suffix = suffix?.let { { Text(it) } },
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(testTag),
+        )
+    }
+}
+
+@Composable
+private fun TagColorSelector(
+    selected: ConnectionTagColor,
+    onSelect: (ConnectionTagColor) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tagColors = listOf(
+        ConnectionTagColor.None to null,
+        ConnectionTagColor.Red to Color(0xFFE53935),
+        ConnectionTagColor.Orange to Color(0xFFFB8C00),
+        ConnectionTagColor.Yellow to Color(0xFFFDD835),
+        ConnectionTagColor.Green to Color(0xFF43A047),
+        ConnectionTagColor.Blue to Color(0xFF1E88E5),
+        ConnectionTagColor.Purple to Color(0xFF8E24AA),
     )
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            t(StringKeys.ConnectionEditor.TagColorLabel),
+            style = MaterialTheme.typography.labelLarge,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tagColors.forEach { (color, displayColor) ->
+                TagColorChip(
+                    color = color,
+                    displayColor = displayColor,
+                    selected = selected == color,
+                    onSelect = onSelect,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TagColorChip(
+    color: ConnectionTagColor,
+    displayColor: Color?,
+    selected: Boolean,
+    onSelect: (ConnectionTagColor) -> Unit,
+) {
+    val borderWidth = if (selected) 3.dp else 1.dp
+    val borderColor = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.outline
+    }
+    val chipModifier = Modifier
+        .size(32.dp)
+        .border(borderWidth, borderColor, CircleShape)
+        .clickable { onSelect(color) }
+        .testTag("connection_editor_tag_color_${color.name.lowercase()}")
+
+    if (color == ConnectionTagColor.None) {
+        Box(
+            modifier = chipModifier,
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    } else {
+        Box(
+            modifier = chipModifier.padding(4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(displayColor!!, CircleShape),
+            )
+        }
+    }
 }

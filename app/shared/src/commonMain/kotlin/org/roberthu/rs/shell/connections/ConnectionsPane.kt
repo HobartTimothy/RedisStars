@@ -1,5 +1,6 @@
 package org.roberthu.rs.shell.connections
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,11 +10,14 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddLink
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -39,7 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
@@ -62,6 +68,24 @@ import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.ConnectionEditorSection
 import org.roberthu.rs.presentation.ConnectionFormState
 import org.roberthu.rs.presentation.ConnectionsUiState
+import org.roberthu.rs.theme.toComposeColor
+
+private sealed interface ConnectionsContextTarget {
+    data object Root : ConnectionsContextTarget
+    data class Group(val id: String) : ConnectionsContextTarget
+}
+
+private sealed interface ConnectionsTreeEntry {
+    val sortName: String
+
+    data class RootProfile(val profile: ConnectionProfile) : ConnectionsTreeEntry {
+        override val sortName: String = profile.name
+    }
+
+    data class GroupEntry(val group: ConnectionGroup) : ConnectionsTreeEntry {
+        override val sortName: String = group.name
+    }
+}
 
 @Composable
 fun ConnectionsPane(
@@ -94,6 +118,7 @@ fun ConnectionsPane(
 ) {
     var contextMenuExpanded by remember { mutableStateOf(false) }
     var contextMenuOffset by remember { mutableStateOf(Offset.Zero) }
+    var contextTarget by remember { mutableStateOf<ConnectionsContextTarget?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(state.error) {
@@ -102,9 +127,18 @@ fun ConnectionsPane(
         onDismissError()
     }
 
-    fun openContextMenu(offset: Offset) {
+    fun openContextMenu(offset: Offset, target: ConnectionsContextTarget) {
         contextMenuOffset = offset
+        contextTarget = target
         contextMenuExpanded = true
+    }
+
+    val treeEntries = remember(state.profiles, state.groups) {
+        val ungrouped = state.profiles.filter { it.groupId == null }
+        buildList {
+            ungrouped.forEach { add(ConnectionsTreeEntry.RootProfile(it)) }
+            state.groups.forEach { add(ConnectionsTreeEntry.GroupEntry(it)) }
+        }.sortedBy { it.sortName }
     }
 
     Box(
@@ -117,7 +151,7 @@ fun ConnectionsPane(
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
                             val change = event.changes.firstOrNull() ?: continue
-                            openContextMenu(change.position)
+                            openContextMenu(change.position, ConnectionsContextTarget.Root)
                         }
                     }
                 }
@@ -127,7 +161,7 @@ fun ConnectionsPane(
                     event.key == Key.F10 &&
                     event.isShiftPressed
                 ) {
-                    openContextMenu(Offset(40f, 40f))
+                    openContextMenu(Offset(40f, 40f), ConnectionsContextTarget.Root)
                     true
                 } else {
                     false
@@ -150,74 +184,124 @@ fun ConnectionsPane(
                 )
             }
             LazyColumn(modifier = Modifier.weight(1f)) {
-                state.groups.forEach { group ->
-                    val groupProfiles = state.profiles.filter { it.groupId == group.id }
-                    item(key = "group-header-${group.id}") {
-                        GroupHeaderRow(
-                            group = group,
-                            count = groupProfiles.size,
-                            selected = group.id == state.selectedGroupId,
-                            onToggle = { onToggleGroupExpanded(group.id) },
-                            onSelect = { onSelectGroup(group.id) },
-                            modifier = Modifier.testTag("connections_group_${group.id}"),
-                        )
-                    }
-                    if (group.expanded) {
-                        items(groupProfiles, key = { "group-${group.id}-${it.id}" }) { profile ->
-                            ConnectionRow(
-                                profile = profile,
-                                selected = profile.id == state.selectedProfileId,
-                                indented = true,
-                                onSelect = onSelect,
-                                onConnect = onConnect,
-                                onTest = onTest,
-                                onEdit = onEdit,
-                                onDelete = onDelete,
-                            )
+                treeEntries.forEach { entry ->
+                    when (entry) {
+                        is ConnectionsTreeEntry.RootProfile -> {
+                            item(key = "root-${entry.profile.id}") {
+                                ConnectionRow(
+                                    profile = entry.profile,
+                                    selected = entry.profile.id == state.selectedProfileId,
+                                    indented = false,
+                                    onSelect = onSelect,
+                                    onConnect = onConnect,
+                                    onTest = onTest,
+                                    onEdit = onEdit,
+                                    onDelete = onDelete,
+                                )
+                            }
+                        }
+                        is ConnectionsTreeEntry.GroupEntry -> {
+                            val group = entry.group
+                            val groupProfiles = state.profiles.filter { it.groupId == group.id }
+                            item(key = "group-header-${group.id}") {
+                                GroupHeaderRow(
+                                    group = group,
+                                    count = groupProfiles.size,
+                                    selected = group.id == state.selectedGroupId,
+                                    onToggle = { onToggleGroupExpanded(group.id) },
+                                    onSelect = { onSelectGroup(group.id) },
+                                    onContextMenu = { offset ->
+                                        openContextMenu(offset, ConnectionsContextTarget.Group(group.id))
+                                    },
+                                    modifier = Modifier.testTag("connections_group_${group.id}"),
+                                )
+                            }
+                            if (group.expanded) {
+                                items(groupProfiles, key = { "group-${group.id}-${it.id}" }) { profile ->
+                                    ConnectionRow(
+                                        profile = profile,
+                                        selected = profile.id == state.selectedProfileId,
+                                        indented = true,
+                                        onSelect = onSelect,
+                                        onConnect = onConnect,
+                                        onTest = onTest,
+                                        onEdit = onEdit,
+                                        onDelete = onDelete,
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-                // Profiles without a group are listed flat — no "未分组" section header.
-                val ungrouped = state.profiles.filter { it.groupId == null }
-                items(ungrouped, key = { "root-${it.id}" }) { profile ->
-                    ConnectionRow(
-                        profile = profile,
-                        selected = profile.id == state.selectedProfileId,
-                        indented = false,
-                        onSelect = onSelect,
-                        onConnect = onConnect,
-                        onTest = onTest,
-                        onEdit = onEdit,
-                        onDelete = onDelete,
-                    )
                 }
             }
         }
 
         DropdownMenu(
             expanded = contextMenuExpanded,
-            onDismissRequest = { contextMenuExpanded = false },
+            onDismissRequest = {
+                contextMenuExpanded = false
+                contextTarget = null
+            },
             offset = DpOffset(contextMenuOffset.x.dp, contextMenuOffset.y.dp),
             modifier = Modifier.testTag("connections_context_menu"),
         ) {
-            DropdownMenuItem(
-                text = { Text(t(StringKeys.Connections.ContextAddGroup)) },
-                leadingIcon = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) },
-                onClick = {
-                    contextMenuExpanded = false
-                    onOpenAddGroupDialog()
-                },
-                modifier = Modifier.testTag("connections_add_group"),
-            )
-            DropdownMenuItem(
-                text = { Text(t(StringKeys.Connections.ContextAddConnection)) },
-                leadingIcon = { Icon(Icons.Default.AddLink, contentDescription = null) },
-                onClick = {
-                    contextMenuExpanded = false
-                    onBeginCreate(state.selectedGroupId)
-                },
-                modifier = Modifier.testTag("connections_add_connection"),
-            )
+            when (val target = contextTarget) {
+                ConnectionsContextTarget.Root -> {
+                    DropdownMenuItem(
+                        text = { Text(t(StringKeys.Connections.ContextCreateConnection)) },
+                        leadingIcon = { Icon(Icons.Default.AddLink, contentDescription = null) },
+                        onClick = {
+                            contextMenuExpanded = false
+                            contextTarget = null
+                            onBeginCreate(null)
+                        },
+                        modifier = Modifier.testTag("connections_add_connection"),
+                    )
+                    DropdownMenuItem(
+                        text = { Text(t(StringKeys.Connections.ContextAddGroup)) },
+                        leadingIcon = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) },
+                        onClick = {
+                            contextMenuExpanded = false
+                            contextTarget = null
+                            onOpenAddGroupDialog()
+                        },
+                        modifier = Modifier.testTag("connections_add_group"),
+                    )
+                }
+                is ConnectionsContextTarget.Group -> {
+                    DropdownMenuItem(
+                        text = { Text(t(StringKeys.Connections.ContextCreateConnectionInGroup)) },
+                        leadingIcon = { Icon(Icons.Default.AddLink, contentDescription = null) },
+                        onClick = {
+                            contextMenuExpanded = false
+                            contextTarget = null
+                            onBeginCreate(target.id)
+                        },
+                        modifier = Modifier.testTag("connections_add_connection_in_group"),
+                    )
+                    DropdownMenuItem(
+                        text = { Text(t(StringKeys.Connections.ContextCreateRootConnection)) },
+                        leadingIcon = { Icon(Icons.Default.AddLink, contentDescription = null) },
+                        onClick = {
+                            contextMenuExpanded = false
+                            contextTarget = null
+                            onBeginCreate(null)
+                        },
+                        modifier = Modifier.testTag("connections_add_root_connection"),
+                    )
+                    DropdownMenuItem(
+                        text = { Text(t(StringKeys.Connections.ContextAddGroup)) },
+                        leadingIcon = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) },
+                        onClick = {
+                            contextMenuExpanded = false
+                            contextTarget = null
+                            onOpenAddGroupDialog()
+                        },
+                        modifier = Modifier.testTag("connections_add_group"),
+                    )
+                }
+                null -> Unit
+            }
         }
 
         SnackbarHost(
@@ -271,6 +355,7 @@ fun ConnectionsPane(
             onTest = onTestEditor,
             onSave = onSaveEditor,
             onParseUrl = onParseClipboardUrl,
+            groups = state.groups,
             onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
         )
     }
@@ -297,6 +382,7 @@ private fun GroupHeaderRow(
     selected: Boolean,
     onToggle: () -> Unit,
     onSelect: () -> Unit,
+    onContextMenu: (Offset) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -307,7 +393,19 @@ private fun GroupHeaderRow(
         },
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 2.dp)
+            .pointerInput(group.id) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                            val change = event.changes.firstOrNull() ?: continue
+                            onContextMenu(change.position)
+                            change.consume()
+                        }
+                    }
+                }
+            },
     ) {
         Row(
             modifier = Modifier
@@ -355,6 +453,7 @@ private fun ConnectionRow(
     onEdit: (ConnectionProfile) -> Unit,
     onDelete: (ConnectionProfile) -> Unit,
 ) {
+    val tagColor = profile.browser.tagColor.toComposeColor()
     Surface(
         color = if (selected) {
             MaterialTheme.colorScheme.secondaryContainer
@@ -368,7 +467,13 @@ private fun ConnectionRow(
             .testTag("connection_${profile.id}"),
     ) {
         Column(Modifier.padding(10.dp)) {
-            Text(profile.name, style = MaterialTheme.typography.labelLarge)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ConnectionTagIndicator(color = tagColor)
+                Text(profile.name, style = MaterialTheme.typography.labelLarge)
+            }
             Text(
                 connectionSummary(profile),
                 style = MaterialTheme.typography.bodySmall,
@@ -386,6 +491,25 @@ private fun ConnectionRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ConnectionTagIndicator(color: Color?) {
+    if (color == null) {
+        Icon(
+            Icons.Default.Close,
+            contentDescription = null,
+            modifier = Modifier.size(10.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(color),
+        )
     }
 }
 
