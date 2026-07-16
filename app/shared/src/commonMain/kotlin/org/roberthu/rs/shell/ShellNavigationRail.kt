@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 
 /**
  * Left-pinned activity rail: primary destinations on top, Settings on the bottom.
@@ -46,6 +48,11 @@ fun ShellNavigationRail(
         selectedTextColor = MaterialTheme.colorScheme.onSurface,
         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+    val toggleContentDescription = if (railCollapsed) {
+        t(StringKeys.Nav.ExpandRail)
+    } else {
+        t(StringKeys.Nav.CollapseRail)
+    }
 
     NavigationRail(
         modifier = modifier
@@ -59,11 +66,7 @@ fun ShellNavigationRail(
             modifier = Modifier
                 .testTag("sidebar_toggle")
                 .semantics {
-                    contentDescription = if (railCollapsed) {
-                        "展开侧边栏"
-                    } else {
-                        "收起侧边栏"
-                    }
+                    contentDescription = toggleContentDescription
                 },
         ) {
             Icon(
@@ -83,13 +86,13 @@ fun ShellNavigationRail(
                 icon = {
                     Icon(
                         imageVector = item.icon,
-                        contentDescription = item.label,
+                        contentDescription = item.label(),
                     )
                 },
                 label = if (railCollapsed) {
                     null
                 } else {
-                    { Text(item.label) }
+                    { Text(item.label()) }
                 },
                 alwaysShowLabel = true,
                 colors = itemColors,
@@ -107,13 +110,13 @@ fun ShellNavigationRail(
             icon = {
                 Icon(
                     imageVector = ShellDestination.Settings.icon,
-                    contentDescription = ShellDestination.Settings.label,
+                    contentDescription = ShellDestination.Settings.label(),
                 )
             },
             label = if (railCollapsed) {
                 null
             } else {
-                { Text(ShellDestination.Settings.label) }
+                { Text(ShellDestination.Settings.label()) }
             },
             alwaysShowLabel = true,
             colors = itemColors,

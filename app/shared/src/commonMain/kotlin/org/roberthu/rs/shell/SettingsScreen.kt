@@ -1,8 +1,11 @@
 package org.roberthu.rs.shell
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -12,6 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import org.roberthu.rs.domain.AppLanguage
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 
 @Composable
 fun SettingsScreen(
@@ -19,6 +25,8 @@ fun SettingsScreen(
     onDarkModeChange: (Boolean) -> Unit,
     autoConnect: Boolean,
     onAutoConnectChange: (Boolean) -> Unit,
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
     modifier: Modifier = Modifier,
     appVersion: String = "1.0.0-beta",
     licenseName: String = "Apache License 2.0",
@@ -31,16 +39,43 @@ fun SettingsScreen(
     ) {
         item(key = "section-software") {
             Text(
-                text = "软件设置",
+                text = t(StringKeys.Settings.Title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
         }
+        item(key = "pref-language") {
+            ListItem(
+                headlineContent = { Text(t(StringKeys.Settings.Language)) },
+                supportingContent = {
+                    Text(t(StringKeys.Settings.LanguageDesc))
+                },
+                trailingContent = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.testTag("settings_language_chips"),
+                    ) {
+                        FilterChip(
+                            selected = language == AppLanguage.ZhCN,
+                            onClick = { onLanguageChange(AppLanguage.ZhCN) },
+                            label = { Text(t(StringKeys.Settings.LanguageOptionZh)) },
+                            modifier = Modifier.testTag("settings_language_zh"),
+                        )
+                        FilterChip(
+                            selected = language == AppLanguage.EnUS,
+                            onClick = { onLanguageChange(AppLanguage.EnUS) },
+                            label = { Text(t(StringKeys.Settings.LanguageOptionEn)) },
+                            modifier = Modifier.testTag("settings_language_en"),
+                        )
+                    }
+                },
+            )
+        }
         item(key = "pref-dark-mode") {
             ListItem(
-                headlineContent = { Text("深色模式") },
-                supportingContent = { Text("Dark Mode") },
+                headlineContent = { Text(t(StringKeys.Settings.DarkMode)) },
+                supportingContent = { Text(t(StringKeys.Settings.DarkModeDesc)) },
                 trailingContent = {
                     Switch(
                         checked = darkMode,
@@ -51,8 +86,8 @@ fun SettingsScreen(
         }
         item(key = "pref-auto-connect") {
             ListItem(
-                headlineContent = { Text("启动时自动连接") },
-                supportingContent = { Text("Auto-connect on startup") },
+                headlineContent = { Text(t(StringKeys.Settings.AutoConnect)) },
+                supportingContent = { Text(t(StringKeys.Settings.AutoConnectDesc)) },
                 trailingContent = {
                     Switch(
                         checked = autoConnect,
@@ -66,7 +101,7 @@ fun SettingsScreen(
         }
         item(key = "section-about") {
             Text(
-                text = "关于",
+                text = t(StringKeys.Settings.AboutTitle),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 8.dp),
@@ -74,20 +109,20 @@ fun SettingsScreen(
         }
         item(key = "about-version") {
             ListItem(
-                headlineContent = { Text("版本") },
+                headlineContent = { Text(t(StringKeys.Settings.Version)) },
                 supportingContent = { Text(appVersion) },
             )
         }
         item(key = "about-license") {
             ListItem(
-                headlineContent = { Text("开源协议") },
+                headlineContent = { Text(t(StringKeys.Settings.License)) },
                 supportingContent = { Text(licenseName) },
             )
         }
         item(key = "about-product") {
             ListItem(
-                headlineContent = { Text("产品") },
-                supportingContent = { Text("RedisStars — Compose Multiplatform Redis 客户端") },
+                headlineContent = { Text(t(StringKeys.Settings.Product)) },
+                supportingContent = { Text(t(StringKeys.Settings.ProductDesc)) },
             )
         }
     }

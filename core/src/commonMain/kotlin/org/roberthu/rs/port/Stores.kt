@@ -19,6 +19,11 @@ data class UserSettings(
     val recentConnectionId: String? = null,
     val rememberPasswords: Boolean = true,
     val remoteBaseUrl: String = "http://127.0.0.1:8080",
+    /**
+     * Persisted UI language tag (`zh-CN` / `en-US`).
+     * `null` means the user has not chosen yet — resolve from the system language on load.
+     */
+    val language: String? = null,
 )
 
 interface UserSettingsStore {

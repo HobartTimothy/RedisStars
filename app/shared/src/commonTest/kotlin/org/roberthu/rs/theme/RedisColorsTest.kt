@@ -47,14 +47,13 @@ class RedisColorsTest {
     }
 
     @Test
-    fun switchingSelection_preservesAllPrimaryLabels() {
-        // Regression: selection must not drop label content (labels are destination.label).
+    fun switchingSelection_preservesAllPrimaryDestinations() {
         var state = ShellUiState()
         ShellDestination.primaryDestinations.forEach { item ->
             state = state.navigateTo(item)
-            assertEquals(item.label, state.destination.label)
+            assertEquals(item, state.destination)
             ShellDestination.primaryDestinations.forEach { other ->
-                assertTrue(other.label.isNotBlank())
+                assertTrue(other.name.isNotBlank())
             }
         }
     }

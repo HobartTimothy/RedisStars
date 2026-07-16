@@ -29,6 +29,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.theme.connectionIndicatorColor
 
@@ -81,10 +83,10 @@ fun RedisAppShell(
                         icon = {
                             Icon(
                                 imageVector = item.icon,
-                                contentDescription = item.label,
+                                contentDescription = item.label(),
                             )
                         },
-                        label = { Text(item.label) },
+                        label = { Text(item.label()) },
                     )
                 }
                 item(
@@ -95,10 +97,10 @@ fun RedisAppShell(
                     icon = {
                         Icon(
                             imageVector = ShellDestination.Settings.icon,
-                            contentDescription = ShellDestination.Settings.label,
+                            contentDescription = ShellDestination.Settings.label(),
                         )
                     },
-                    label = { Text(ShellDestination.Settings.label) },
+                    label = { Text(ShellDestination.Settings.label()) },
                 )
             },
         ) {
@@ -125,12 +127,14 @@ private fun ShellMainContent(
     modifier: Modifier = Modifier,
 ) {
     val connected = connectionState is ConnectionState.Connected
+    val connectedStateDescription = t(StringKeys.Shell.StatusConnected)
+    val disconnectedStateDescription = t(StringKeys.Shell.StatusDisconnected)
     val statusText = when (connectionState) {
         is ConnectionState.Connected -> connectionState.displayName
-        ConnectionState.Connecting -> "Connecting…"
-        is ConnectionState.Reconnecting -> "Reconnecting (${connectionState.attempt})…"
-        is ConnectionState.Failed -> "Connection failed"
-        ConnectionState.Disconnected -> "Disconnected"
+        ConnectionState.Connecting -> t(StringKeys.Shell.StatusConnecting)
+        is ConnectionState.Reconnecting -> t(StringKeys.Shell.StatusReconnecting, connectionState.attempt)
+        is ConnectionState.Failed -> t(StringKeys.Shell.StatusFailed)
+        ConnectionState.Disconnected -> t(StringKeys.Shell.StatusDisconnected)
     }
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -150,9 +154,9 @@ private fun ShellMainContent(
                                 )
                                 .semantics {
                                     stateDescription = if (connected) {
-                                        "Connected"
+                                        connectedStateDescription
                                     } else {
-                                        "Disconnected"
+                                        disconnectedStateDescription
                                     }
                                 },
                         )
@@ -190,7 +194,7 @@ private fun ShellMainContent(
                         modifier = Modifier.weight(1f),
                     )
                     TextButton(onClick = { onAction(ShellUiAction.DismissError) }) {
-                        Text("Dismiss")
+                        Text(t(StringKeys.Shell.Dismiss))
                     }
                 }
             }
@@ -215,6 +219,10 @@ private fun ShellMainContent(
                         autoConnect = state.autoConnect,
                         onAutoConnectChange = {
                             onAction(ShellUiAction.SetAutoConnect(it))
+                        },
+                        language = state.language,
+                        onLanguageChange = {
+                            onAction(ShellUiAction.SetLanguage(it))
                         },
                         modifier = Modifier
                             .fillMaxSize()

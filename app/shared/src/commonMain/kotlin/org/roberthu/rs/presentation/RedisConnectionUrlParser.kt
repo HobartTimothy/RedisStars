@@ -1,6 +1,8 @@
 package org.roberthu.rs.presentation
 
 import org.roberthu.rs.domain.DeploymentMode
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
 
 data class ParsedRedisConnectionUrl(
     val host: String,
@@ -47,64 +49,68 @@ object RedisConnectionUrlParser {
     fun parse(raw: String): RedisConnectionUrlParseResult {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) {
-            return RedisConnectionUrlParseResult.Failure("URL must not be blank")
+            return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlBlank))
         }
 
         val schemeSeparator = trimmed.indexOf("://")
         if (schemeSeparator <= 0) {
-            return RedisConnectionUrlParseResult.Failure("Invalid Redis URL format")
+            return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlInvalidFormat))
         }
 
         val scheme = trimmed.substring(0, schemeSeparator).lowercase()
         val tlsEnabled = when (scheme) {
             "redis" -> false
             "rediss" -> true
-            else -> return RedisConnectionUrlParseResult.Failure("Unsupported URL scheme: $scheme")
+            else -> return RedisConnectionUrlParseResult.Failure(
+                AppI18n.t(StringKeys.Validation.UrlUnsupportedScheme, scheme),
+            )
         }
 
         val remainder = trimmed.substring(schemeSeparator + 3)
         if (remainder.isEmpty()) {
-            return RedisConnectionUrlParseResult.Failure("Host is required")
+            return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlHostRequired))
         }
 
         // Reject sentinel/cluster style multi-host URLs.
         if (remainder.contains(",")) {
-            return RedisConnectionUrlParseResult.Failure("Sentinel and Cluster URLs are not supported")
+            return RedisConnectionUrlParseResult.Failure(
+                AppI18n.t(StringKeys.Validation.UrlSentinelClusterUnsupported),
+            )
         }
 
         val (authority, path) = splitAuthorityAndPath(remainder)
         if (authority.isEmpty()) {
-            return RedisConnectionUrlParseResult.Failure("Host is required")
+            return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlHostRequired))
         }
 
         val credentialsAndHost = splitCredentials(authority)
-            ?: return RedisConnectionUrlParseResult.Failure("Invalid Redis URL format")
+            ?: return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlInvalidFormat))
 
         val hostPort = credentialsAndHost.hostPort
         if (hostPort.isEmpty() || hostPort.startsWith(":")) {
-            return RedisConnectionUrlParseResult.Failure("Host is required")
+            return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlHostRequired))
         }
 
         val (host, portRaw) = splitHostPort(hostPort)
-            ?: return RedisConnectionUrlParseResult.Failure("Host is required")
+            ?: return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlHostRequired))
         if (host.isBlank()) {
-            return RedisConnectionUrlParseResult.Failure("Host is required")
+            return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlHostRequired))
         }
 
         val port = when {
             portRaw == null || portRaw.isEmpty() -> 6379
             else -> {
                 val parsed = portRaw.toIntOrNull()
-                    ?: return RedisConnectionUrlParseResult.Failure("Port must be a number")
+                    ?: return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlPortNumber))
                 if (parsed !in 1..65535) {
-                    return RedisConnectionUrlParseResult.Failure("Port must be between 1 and 65535")
+                    return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlPortRange))
                 }
                 parsed
             }
         }
 
         val database = parseDatabase(path)
-            ?: return RedisConnectionUrlParseResult.Failure("Database must be a non-negative integer")
+            ?: return RedisConnectionUrlParseResult.Failure(AppI18n.t(StringKeys.Validation.UrlDatabaseInvalid))
 
         return RedisConnectionUrlParseResult.Success(
             ParsedRedisConnectionUrl(

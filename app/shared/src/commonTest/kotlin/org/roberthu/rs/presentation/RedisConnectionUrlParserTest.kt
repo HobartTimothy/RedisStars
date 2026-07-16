@@ -1,5 +1,9 @@
 package org.roberthu.rs.presentation
 
+import org.roberthu.rs.domain.AppLanguage
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -7,6 +11,12 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RedisConnectionUrlParserTest {
+
+    @BeforeTest
+    fun useEnglishCatalog() {
+        AppI18n.update(AppLanguage.EnUS)
+    }
+
     @Test
     fun redis_defaultPort() {
         val result = RedisConnectionUrlParser.parse("redis://localhost")
@@ -68,7 +78,10 @@ class RedisConnectionUrlParserTest {
         val result = RedisConnectionUrlParser.parse("http://localhost:6379")
 
         assertTrue(result.isFailure)
-        assertTrue(result.error!!.contains("scheme", ignoreCase = true))
+        assertEquals(
+            AppI18n.t(StringKeys.Validation.UrlUnsupportedScheme, "http"),
+            result.error,
+        )
     }
 
     @Test
@@ -76,7 +89,7 @@ class RedisConnectionUrlParserTest {
         val result = RedisConnectionUrlParser.parse("redis://localhost:99999")
 
         assertTrue(result.isFailure)
-        assertTrue(result.error!!.contains("port", ignoreCase = true))
+        assertEquals(AppI18n.t(StringKeys.Validation.UrlPortRange), result.error)
     }
 
     @Test
@@ -84,7 +97,7 @@ class RedisConnectionUrlParserTest {
         val result = RedisConnectionUrlParser.parse("redis://:6379")
 
         assertTrue(result.isFailure)
-        assertTrue(result.error!!.contains("host", ignoreCase = true))
+        assertEquals(AppI18n.t(StringKeys.Validation.UrlHostRequired), result.error)
     }
 
     @Test

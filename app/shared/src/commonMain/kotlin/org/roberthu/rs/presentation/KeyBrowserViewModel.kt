@@ -16,6 +16,9 @@ import org.roberthu.rs.domain.RedisKeyPayload
 import org.roberthu.rs.domain.RedisKeySummary
 import org.roberthu.rs.domain.RedisKeyType
 import org.roberthu.rs.domain.ScanQuery
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.ValidationI18n
 import org.roberthu.rs.port.KeyBrowserPort
 import org.roberthu.rs.port.KeyCommandPort
 import org.roberthu.rs.usecase.BrowseKeys
@@ -223,7 +226,12 @@ class KeyBrowserViewModel(
                 }
                 .onFailure { error ->
                     val validationErrors = if (error is RedisError.Validation) {
-                        mapOf("global" to (error.message ?: "验证失败"))
+                        mapOf(
+                            "global" to (
+                                error.message?.let(ValidationI18n::localizeJoin)
+                                    ?: AppI18n.t(StringKeys.Errors.ValidationFailed)
+                                ),
+                        )
                     } else {
                         emptyMap()
                     }
@@ -263,7 +271,10 @@ class KeyBrowserViewModel(
                 }
                 .onFailure { error ->
                     mutableState.update {
-                        it.copy(databasesLoading = false, error = error.message)
+                        it.copy(
+                            databasesLoading = false,
+                            error = error.message ?: AppI18n.t(StringKeys.Errors.LoadDatabasesFailed),
+                        )
                     }
                 }
         }
@@ -316,7 +327,7 @@ class KeyBrowserViewModel(
                             if (current.scanRequestId != requestId) return@update current
                             current.copy(
                                 loading = false,
-                                error = error.message ?: "无法扫描键",
+                                error = error.message ?: AppI18n.t(StringKeys.Errors.ScanKeysFailed),
                             )
                         }
                     }

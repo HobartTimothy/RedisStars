@@ -56,6 +56,9 @@ import androidx.compose.ui.unit.dp
 import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.domain.DeploymentMode
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.ConnectionEditorSection
 import org.roberthu.rs.presentation.ConnectionFormState
 import org.roberthu.rs.presentation.ConnectionsUiState
@@ -137,10 +140,10 @@ fun ConnectionsPane(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("连接", style = MaterialTheme.typography.titleSmall)
+            Text(t(StringKeys.Connections.Title), style = MaterialTheme.typography.titleSmall)
             if (state.profiles.isEmpty() && state.groups.isEmpty()) {
                 Text(
-                    "添加 Redis 连接以开始浏览键。",
+                    t(StringKeys.Connections.Empty),
                     modifier = Modifier.testTag("connections_empty"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -198,7 +201,7 @@ fun ConnectionsPane(
             modifier = Modifier.testTag("connections_context_menu"),
         ) {
             DropdownMenuItem(
-                text = { Text("添加组") },
+                text = { Text(t(StringKeys.Connections.ContextAddGroup)) },
                 leadingIcon = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) },
                 onClick = {
                     contextMenuExpanded = false
@@ -207,7 +210,7 @@ fun ConnectionsPane(
                 modifier = Modifier.testTag("connections_add_group"),
             )
             DropdownMenuItem(
-                text = { Text("添加连接") },
+                text = { Text(t(StringKeys.Connections.ContextAddConnection)) },
                 leadingIcon = { Icon(Icons.Default.AddLink, contentDescription = null) },
                 onClick = {
                     contextMenuExpanded = false
@@ -234,12 +237,12 @@ fun ConnectionsPane(
     state.groupDialog?.let { dialog ->
         AlertDialog(
             onDismissRequest = onDismissGroupDialog,
-            title = { Text("新建连接组") },
+            title = { Text(t(StringKeys.Connections.GroupDialogTitle)) },
             text = {
                 OutlinedTextField(
                     value = dialog.name,
                     onValueChange = onUpdateGroupName,
-                    label = { Text("组名称") },
+                    label = { Text(t(StringKeys.Connections.GroupNameLabel)) },
                     isError = dialog.error != null,
                     supportingText = dialog.error?.let { { Text(it) } },
                     singleLine = true,
@@ -249,10 +252,10 @@ fun ConnectionsPane(
                 )
             },
             confirmButton = {
-                Button(onClick = onConfirmCreateGroup) { Text("确定") }
+                Button(onClick = onConfirmCreateGroup) { Text(t(StringKeys.Connections.GroupConfirm)) }
             },
             dismissButton = {
-                TextButton(onClick = onDismissGroupDialog) { Text("取消") }
+                TextButton(onClick = onDismissGroupDialog) { Text(t(StringKeys.Connections.GroupCancel)) }
             },
         )
     }
@@ -275,13 +278,13 @@ fun ConnectionsPane(
     state.pendingDelete?.let { profile ->
         AlertDialog(
             onDismissRequest = onDismissDelete,
-            title = { Text("删除连接？") },
-            text = { Text("删除「${profile.name}」？此操作无法撤销。") },
+            title = { Text(t(StringKeys.Connections.DeleteTitle)) },
+            text = { Text(t(StringKeys.Connections.DeleteMessage, profile.name)) },
             confirmButton = {
-                Button(onClick = onConfirmDelete) { Text("删除") }
+                Button(onClick = onConfirmDelete) { Text(t(StringKeys.Connections.Delete)) }
             },
             dismissButton = {
-                TextButton(onClick = onDismissDelete) { Text("取消") }
+                TextButton(onClick = onDismissDelete) { Text(t(StringKeys.Connections.GroupCancel)) }
             },
         )
     }
@@ -373,13 +376,13 @@ private fun ConnectionRow(
             )
             if (selected) {
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    TextButton(onClick = { onConnect(profile) }) { Text("连接") }
-                    TextButton(onClick = { onTest(profile) }) { Text("测试") }
+                    TextButton(onClick = { onConnect(profile) }) { Text(t(StringKeys.Connections.Connect)) }
+                    TextButton(onClick = { onTest(profile) }) { Text(t(StringKeys.Connections.Test)) }
                     TextButton(
                         onClick = { onEdit(profile) },
                         modifier = Modifier.testTag("connection_edit_${profile.id}"),
-                    ) { Text("编辑") }
-                    TextButton(onClick = { onDelete(profile) }) { Text("删除") }
+                    ) { Text(t(StringKeys.Connections.Edit)) }
+                    TextButton(onClick = { onDelete(profile) }) { Text(t(StringKeys.Connections.Delete)) }
                 }
             }
         }
@@ -389,6 +392,11 @@ private fun ConnectionRow(
 internal fun connectionSummary(profile: ConnectionProfile): String = when (profile.mode) {
     DeploymentMode.Standalone -> "${profile.host}:${profile.port}"
     DeploymentMode.Sentinel ->
-        "Sentinel · ${profile.masterName.ifBlank { "—" }} · ${profile.sentinelNodes.size} nodes"
-    DeploymentMode.Cluster -> "Cluster · ${profile.seedNodes.size} seeds"
+        AppI18n.t(
+            StringKeys.Connections.SummarySentinel,
+            profile.masterName.ifBlank { "—" },
+            profile.sentinelNodes.size,
+        )
+    DeploymentMode.Cluster ->
+        AppI18n.t(StringKeys.Connections.SummaryCluster, profile.seedNodes.size)
 }

@@ -6,6 +6,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.roberthu.rs.domain.AppLanguage
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.platform.resolveInitialAppLanguage
 import org.roberthu.rs.port.UserSettings
 import org.roberthu.rs.port.UserSettingsStore
 import org.roberthu.rs.shell.ShellUiAction
@@ -15,20 +19,26 @@ class ShellViewModel(
     private val settingsStore: UserSettingsStore,
     private val scope: CoroutineScope,
 ) {
-    private val mutableState = MutableStateFlow(ShellUiState())
+    private val mutableState = MutableStateFlow(
+        ShellUiState(language = resolveInitialAppLanguage(storedTag = null)),
+    )
     val state: StateFlow<ShellUiState> = mutableState.asStateFlow()
 
     private var settings = UserSettings()
 
     init {
+        AppI18n.update(mutableState.value.language)
         scope.launch {
             runCatching { settingsStore.load() }
                 .onSuccess { loaded ->
                     settings = loaded
+                    val language = resolveInitialAppLanguage(loaded.language)
+                    AppI18n.update(language)
                     mutableState.update {
                         it.copy(
                             darkMode = loaded.darkMode,
                             autoConnect = loaded.autoConnect,
+                            language = language,
                             bannerError = null,
                         )
                     }
@@ -59,6 +69,13 @@ class ShellViewModel(
                 persistSettings()
             }
 
+            is ShellUiAction.SetLanguage -> {
+                settings = settings.copy(language = action.language.tag)
+                AppI18n.update(action.language)
+                mutableState.update { it.copy(language = action.language) }
+                persistSettings()
+            }
+
             ShellUiAction.DismissError -> mutableState.update {
                 it.copy(bannerError = null)
             }
@@ -75,7 +92,10 @@ class ShellViewModel(
 
     private fun showError(error: Throwable) {
         mutableState.update {
-            it.copy(bannerError = error.message ?: "Unable to save settings")
+            it.copy(
+                bannerError = error.message
+                    ?: AppI18n.t(StringKeys.Shell.ErrorSaveSettings),
+            )
         }
     }
 }

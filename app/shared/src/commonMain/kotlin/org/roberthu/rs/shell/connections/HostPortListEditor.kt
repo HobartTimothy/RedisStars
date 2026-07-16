@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.HostPortFormState
 
 @Composable
@@ -58,7 +60,7 @@ fun HostPortListEditor(
                             },
                         )
                     },
-                    label = { Text("Host") },
+                    label = { Text(t(StringKeys.ConnectionEditor.HostLabel)) },
                     enabled = enabled,
                     singleLine = true,
                     isError = fieldErrors.containsKey("$listKey.$index.host"),
@@ -76,7 +78,7 @@ fun HostPortListEditor(
                             },
                         )
                     },
-                    label = { Text("Port") },
+                    label = { Text(t(StringKeys.ConnectionEditor.PortLabel)) },
                     enabled = enabled,
                     singleLine = true,
                     isError = fieldErrors.containsKey("$listKey.$index.port"),
@@ -90,7 +92,7 @@ fun HostPortListEditor(
                     enabled = enabled && nodes.size > 1,
                     modifier = Modifier.testTag("connection_editor_${listKey}_${index}_delete"),
                 ) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Remove node")
+                    Icon(Icons.Filled.Delete, contentDescription = t(StringKeys.ConnectionEditor.RemoveNode))
                 }
             }
         }
@@ -102,7 +104,7 @@ fun HostPortListEditor(
             modifier = Modifier.testTag("connection_editor_${listKey}_add"),
         ) {
             Icon(Icons.Filled.Add, contentDescription = null)
-            Text("添加节点")
+            Text(t(StringKeys.ConnectionEditor.AddNode))
         }
     }
 }

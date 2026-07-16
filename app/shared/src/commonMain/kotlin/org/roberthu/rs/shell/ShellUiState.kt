@@ -2,6 +2,7 @@ package org.roberthu.rs.shell
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.roberthu.rs.domain.AppLanguage
 
 /**
  * Single source of truth for shell chrome navigation + left-rail collapse.
@@ -12,6 +13,7 @@ data class ShellUiState(
     val railCollapsed: Boolean = false,
     val darkMode: Boolean = true,
     val autoConnect: Boolean = false,
+    val language: AppLanguage = AppLanguage.EnUS,
     val nodeName: String = "",
     val connected: Boolean = false,
     val bannerError: String? = null,
@@ -26,6 +28,7 @@ sealed interface ShellUiAction {
     data object ToggleRail : ShellUiAction
     data class SetDarkMode(val enabled: Boolean) : ShellUiAction
     data class SetAutoConnect(val enabled: Boolean) : ShellUiAction
+    data class SetLanguage(val language: AppLanguage) : ShellUiAction
     data object DismissError : ShellUiAction
 }
 

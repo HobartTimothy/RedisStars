@@ -12,6 +12,8 @@ import org.roberthu.rs.domain.KeyMetadata
 import org.roberthu.rs.domain.RedisKeySummary
 import org.roberthu.rs.domain.RedisKeyType
 import org.roberthu.rs.domain.ZSetEntry
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.port.KeyCommandPort
 import org.roberthu.rs.port.RedisDataPort
 import org.roberthu.rs.usecase.EditKeyValue
@@ -138,10 +140,10 @@ class KeyDetailViewModel(
             RedisKeyType.ZSet -> KeyContent.ZSetValue(
                 data.zscan(metadata.key, null, PAGE_SIZE).getOrThrow().entries,
             )
-            RedisKeyType.Stream -> KeyContent.Unsupported("Stream viewing is not available yet.")
-            RedisKeyType.Json -> KeyContent.Unsupported("JSON viewing is not available yet.")
+            RedisKeyType.Stream -> KeyContent.Unsupported(AppI18n.t(StringKeys.KeyDetail.StreamUnsupported))
+            RedisKeyType.Json -> KeyContent.Unsupported(AppI18n.t(StringKeys.KeyDetail.JsonUnsupported))
             RedisKeyType.Other, RedisKeyType.Unknown ->
-                KeyContent.Unsupported("This Redis value type cannot be displayed.")
+                KeyContent.Unsupported(AppI18n.t(StringKeys.KeyDetail.TypeUnsupported))
         }
 
     private fun mutate(block: suspend () -> KeyContent?) {
@@ -168,7 +170,7 @@ class KeyDetailViewModel(
             it.copy(
                 loading = false,
                 saving = false,
-                error = error.message ?: "Key operation failed",
+                error = error.message ?: AppI18n.t(StringKeys.Errors.KeyOperationFailed),
             )
         }
     }

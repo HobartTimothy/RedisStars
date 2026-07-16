@@ -5,6 +5,8 @@ import org.roberthu.rs.domain.DeploymentMode
 import org.roberthu.rs.domain.HostPort
 import org.roberthu.rs.domain.TimeoutOptions
 import org.roberthu.rs.domain.TlsOptions
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -120,7 +122,7 @@ class ConnectionEditorStateTest {
         val result = form.toConnectionProfile("id")
 
         assertTrue(result.isFailure)
-        assertEquals("Port is required", result.fieldErrors["port"])
+        assertEquals(AppI18n.t(StringKeys.Validation.PortRequired), result.fieldErrors["port"])
     }
 
     @Test
@@ -130,7 +132,7 @@ class ConnectionEditorStateTest {
         val result = form.toConnectionProfile("id")
 
         assertTrue(result.isFailure)
-        assertEquals("Port must be a number", result.fieldErrors["port"])
+        assertEquals(AppI18n.t(StringKeys.Validation.PortInvalidNumber), result.fieldErrors["port"])
     }
 
     @Test
@@ -140,7 +142,7 @@ class ConnectionEditorStateTest {
         val result = form.toConnectionProfile("id")
 
         assertTrue(result.isFailure)
-        assertEquals("Port must be between 1 and 65535", result.fieldErrors["port"])
+        assertEquals(AppI18n.t(StringKeys.Validation.PortRange), result.fieldErrors["port"])
     }
 
     @Test

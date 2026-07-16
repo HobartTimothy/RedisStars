@@ -1,4 +1,7 @@
 <resources>
+    <!-- NOTE: Runtime language switching does NOT read this file. The source of truth for
+         translated UI strings is org.roberthu.rs.i18n.StringCatalog (StringsEnUs / StringsZhCn),
+         driven by AppI18n / t(key). This bundle is kept only as a static Compose resource. -->
     <string name="app_name">RedisStars</string>
     <string name="connection_connected">Connected</string>
     <string name="connection_disconnected">Disconnected</string>

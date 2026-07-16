@@ -52,6 +52,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import org.roberthu.rs.domain.RedisDatabaseSummary
 import org.roberthu.rs.domain.RedisKeySummary
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.KeyBrowserUiState
 import org.roberthu.rs.theme.color
 
@@ -84,13 +86,13 @@ fun KeyBrowserScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "键 (${state.keys.size})",
+                t(StringKeys.Keys.TitleCount, state.keys.size),
                 style = MaterialTheme.typography.titleSmall,
             )
             Row {
                 TooltipBox(
                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                    tooltip = { Text("刷新") },
+                    tooltip = { Text(t(StringKeys.Keys.Refresh)) },
                     state = rememberTooltipState(),
                 ) {
                     IconButton(
@@ -98,12 +100,12 @@ fun KeyBrowserScreen(
                         enabled = enabled && !state.loading,
                         modifier = Modifier.testTag("keys_refresh"),
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                        Icon(Icons.Default.Refresh, contentDescription = t(StringKeys.Keys.Refresh))
                     }
                 }
                 TooltipBox(
                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                    tooltip = { Text("添加键") },
+                    tooltip = { Text(t(StringKeys.Keys.Add)) },
                     state = rememberTooltipState(),
                 ) {
                     IconButton(
@@ -111,7 +113,7 @@ fun KeyBrowserScreen(
                         enabled = enabled,
                         modifier = Modifier.testTag("keys_add"),
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "添加键")
+                        Icon(Icons.Default.Add, contentDescription = t(StringKeys.Keys.Add))
                     }
                 }
             }
@@ -120,14 +122,14 @@ fun KeyBrowserScreen(
         OutlinedTextField(
             value = state.pattern,
             onValueChange = onPatternChange,
-            label = { Text("匹配模式") },
-            placeholder = { Text("users:*") },
+            label = { Text(t(StringKeys.Keys.PatternLabel)) },
+            placeholder = { Text(t(StringKeys.Keys.PatternPlaceholder)) },
             enabled = enabled && !state.loading,
             singleLine = true,
             trailingIcon = {
                 if (state.pattern.isNotEmpty()) {
                     IconButton(onClick = { onPatternChange("") }) {
-                        Icon(Icons.Default.Clear, contentDescription = "清除")
+                        Icon(Icons.Default.Clear, contentDescription = t(StringKeys.Keys.ClearPattern))
                     }
                 }
             },
@@ -154,13 +156,13 @@ fun KeyBrowserScreen(
                         .size(20.dp)
                         .testTag("key_scan_loading"),
                 )
-                TextButton(onClick = onCancel) { Text("取消") }
+                TextButton(onClick = onCancel) { Text(t(StringKeys.Keys.CancelScan)) }
             }
         }
 
         if (!enabled) {
             Text(
-                "连接 Redis 后可浏览键。",
+                t(StringKeys.Keys.NotConnected),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -170,7 +172,7 @@ fun KeyBrowserScreen(
                 modifier = Modifier.fillMaxWidth().testTag("key_scan_error"),
             ) {
                 Text(
-                    "$it 选择刷新重试。",
+                    "$it ${t(StringKeys.Keys.ScanErrorHint)}",
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.padding(8.dp),
                 )
@@ -178,14 +180,14 @@ fun KeyBrowserScreen(
         }
         state.partialFailures.takeIf { it.isNotEmpty() }?.let { failures ->
             Text(
-                "${failures.size} 个集群节点扫描失败，结果可能不完整。",
+                t(StringKeys.Keys.ClusterPartial, failures.size),
                 color = MaterialTheme.colorScheme.tertiary,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
         if (enabled && !state.loading && state.error == null && state.keys.isEmpty()) {
             Text(
-                "没有匹配此模式的键。",
+                t(StringKeys.Keys.Empty),
                 modifier = Modifier.testTag("key_list_empty"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -206,7 +208,7 @@ fun KeyBrowserScreen(
                         enabled = state.canLoadMore,
                         modifier = Modifier.fillMaxWidth().testTag("load_more"),
                     ) {
-                        Text("加载更多")
+                        Text(t(StringKeys.Keys.LoadMore))
                     }
                 }
             }
@@ -275,12 +277,13 @@ private fun DatabaseSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selected = databases.firstOrNull { it.index == selectedDatabase }
-    val label = selected?.let { "db${it.index} (${it.keyCount})" } ?: "db$selectedDatabase"
+    val label = selected?.let { t(StringKeys.Keys.DatabaseFormat, it.index, it.keyCount) }
+        ?: "db$selectedDatabase"
 
     if (clusterMode) {
         TooltipBox(
             positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-            tooltip = { Text("Cluster 模式仅支持 db0") },
+            tooltip = { Text(t(StringKeys.Keys.ClusterDbTooltip)) },
             state = rememberTooltipState(),
         ) {
             Surface(
@@ -307,7 +310,7 @@ private fun DatabaseSelector(
             .testTag("keys_database_dropdown"),
     ) {
         OutlinedTextField(
-            value = if (loading) "加载中…" else label,
+            value = if (loading) t(StringKeys.Keys.DatabasesLoading) else label,
             onValueChange = {},
             readOnly = true,
             enabled = enabled && !loading,
@@ -322,7 +325,7 @@ private fun DatabaseSelector(
         ) {
             databases.forEach { db ->
                 DropdownMenuItem(
-                    text = { Text("db${db.index} (${db.keyCount})") },
+                    text = { Text(t(StringKeys.Keys.DatabaseFormat, db.index, db.keyCount)) },
                     onClick = {
                         expanded = false
                         onSelectDatabase(db.index)

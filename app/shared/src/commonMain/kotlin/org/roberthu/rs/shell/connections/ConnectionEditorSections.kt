@@ -32,6 +32,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import org.roberthu.rs.domain.DeploymentMode
 import org.roberthu.rs.domain.SshAuthMethod
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.ConnectionFormState
 import org.roberthu.rs.presentation.HostPortFormState
 
@@ -45,9 +47,9 @@ fun GeneralConnectionSection(
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     val modes = listOf(
-        DeploymentMode.Standalone to "Standalone",
-        DeploymentMode.Sentinel to "Sentinel",
-        DeploymentMode.Cluster to "Cluster",
+        DeploymentMode.Standalone to StringKeys.ConnectionEditor.ModeStandalone,
+        DeploymentMode.Sentinel to StringKeys.ConnectionEditor.ModeSentinel,
+        DeploymentMode.Cluster to StringKeys.ConnectionEditor.ModeCluster,
     )
 
     Column(
@@ -57,7 +59,7 @@ fun GeneralConnectionSection(
         OutlinedTextField(
             value = form.name,
             onValueChange = { onChange(form.copy(name = it)) },
-            label = { Text("连接名") },
+            label = { Text(t(StringKeys.ConnectionEditor.NameLabel)) },
             singleLine = true,
             isError = fieldErrors.containsKey("name"),
             supportingText = fieldErrors["name"]?.let { { Text(it) } },
@@ -66,9 +68,9 @@ fun GeneralConnectionSection(
                 .testTag("connection_editor_name"),
         )
 
-        Text("部署模式", style = MaterialTheme.typography.labelLarge)
+        Text(t(StringKeys.ConnectionEditor.DeploymentModeLabel), style = MaterialTheme.typography.labelLarge)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            modes.forEachIndexed { index, (mode, label) ->
+            modes.forEachIndexed { index, (mode, labelKey) ->
                 SegmentedButton(
                     selected = form.deploymentMode == mode,
                     onClick = {
@@ -82,7 +84,7 @@ fun GeneralConnectionSection(
                     shape = SegmentedButtonDefaults.itemShape(index, modes.size),
                     modifier = Modifier.testTag("connection_editor_mode_${mode.name.lowercase()}"),
                 ) {
-                    Text(label)
+                    Text(t(labelKey))
                 }
             }
         }
@@ -91,7 +93,7 @@ fun GeneralConnectionSection(
             OutlinedTextField(
                 value = form.host,
                 onValueChange = { onChange(form.copy(host = it)) },
-                label = { Text("Host") },
+                label = { Text(t(StringKeys.ConnectionEditor.HostLabel)) },
                 singleLine = true,
                 isError = fieldErrors.containsKey("host"),
                 supportingText = fieldErrors["host"]?.let { { Text(it) } },
@@ -102,7 +104,7 @@ fun GeneralConnectionSection(
             OutlinedTextField(
                 value = form.port,
                 onValueChange = { onChange(form.copy(port = it)) },
-                label = { Text("Port") },
+                label = { Text(t(StringKeys.ConnectionEditor.PortLabel)) },
                 singleLine = true,
                 isError = fieldErrors.containsKey("port"),
                 supportingText = fieldErrors["port"]?.let { { Text(it) } },
@@ -115,8 +117,8 @@ fun GeneralConnectionSection(
         OutlinedTextField(
             value = form.username,
             onValueChange = { onChange(form.copy(username = it)) },
-            label = { Text("用户名（可选）") },
-            placeholder = { Text("可留空") },
+            label = { Text(t(StringKeys.ConnectionEditor.UsernameLabel)) },
+            placeholder = { Text(t(StringKeys.ConnectionEditor.UsernamePlaceholder)) },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -126,8 +128,8 @@ fun GeneralConnectionSection(
         OutlinedTextField(
             value = form.password,
             onValueChange = { onChange(form.copy(password = it)) },
-            label = { Text("密码") },
-            placeholder = { Text("保存后会记住") },
+            label = { Text(t(StringKeys.ConnectionEditor.PasswordLabel)) },
+            placeholder = { Text(t(StringKeys.ConnectionEditor.PasswordPlaceholder)) },
             singleLine = true,
             visualTransformation = if (passwordVisible) {
                 VisualTransformation.None
@@ -145,7 +147,11 @@ fun GeneralConnectionSection(
                         } else {
                             Icons.Filled.Visibility
                         },
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        contentDescription = if (passwordVisible) {
+                            t(StringKeys.ConnectionEditor.HidePassword)
+                        } else {
+                            t(StringKeys.ConnectionEditor.ShowPassword)
+                        },
                     )
                 }
             },
@@ -159,7 +165,7 @@ fun GeneralConnectionSection(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("通过 SSH 隧道连接", modifier = Modifier.weight(1f))
+                Text(t(StringKeys.ConnectionEditor.SshTunnelToggle), modifier = Modifier.weight(1f))
                 Switch(
                     checked = form.sshEnabled,
                     onCheckedChange = { onChange(form.copy(sshEnabled = it)) },
@@ -189,8 +195,8 @@ private fun SshTunnelSection(
     var sshPasswordVisible by remember { mutableStateOf(false) }
     var passphraseVisible by remember { mutableStateOf(false) }
     val authMethods = listOf(
-        SshAuthMethod.Password to "Password",
-        SshAuthMethod.PrivateKey to "Private Key",
+        SshAuthMethod.Password to StringKeys.ConnectionEditor.SshAuthPassword,
+        SshAuthMethod.PrivateKey to StringKeys.ConnectionEditor.SshAuthPrivateKey,
     )
 
     Column(
@@ -200,11 +206,11 @@ private fun SshTunnelSection(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         HorizontalDivider()
-        Text("SSH 隧道配置", style = MaterialTheme.typography.titleSmall)
+        Text(t(StringKeys.ConnectionEditor.SshSectionTitle), style = MaterialTheme.typography.titleSmall)
         OutlinedTextField(
             value = form.sshHost,
             onValueChange = { onChange(form.copy(sshHost = it)) },
-            label = { Text("SSH Host") },
+            label = { Text(t(StringKeys.ConnectionEditor.SshHostLabel)) },
             singleLine = true,
             isError = fieldErrors.containsKey("sshHost"),
             supportingText = fieldErrors["sshHost"]?.let { { Text(it) } },
@@ -215,7 +221,7 @@ private fun SshTunnelSection(
         OutlinedTextField(
             value = form.sshPort,
             onValueChange = { onChange(form.copy(sshPort = it)) },
-            label = { Text("SSH Port") },
+            label = { Text(t(StringKeys.ConnectionEditor.SshPortLabel)) },
             singleLine = true,
             isError = fieldErrors.containsKey("sshPort"),
             supportingText = fieldErrors["sshPort"]?.let { { Text(it) } },
@@ -226,7 +232,7 @@ private fun SshTunnelSection(
         OutlinedTextField(
             value = form.sshUsername,
             onValueChange = { onChange(form.copy(sshUsername = it)) },
-            label = { Text("SSH Username") },
+            label = { Text(t(StringKeys.ConnectionEditor.SshUsernameLabel)) },
             singleLine = true,
             isError = fieldErrors.containsKey("sshUsername"),
             supportingText = fieldErrors["sshUsername"]?.let { { Text(it) } },
@@ -235,9 +241,9 @@ private fun SshTunnelSection(
                 .testTag("connection_editor_ssh_username"),
         )
 
-        Text("SSH 认证方式", style = MaterialTheme.typography.labelLarge)
+        Text(t(StringKeys.ConnectionEditor.SshAuthMethodLabel), style = MaterialTheme.typography.labelLarge)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            authMethods.forEachIndexed { index, (method, label) ->
+            authMethods.forEachIndexed { index, (method, labelKey) ->
                 SegmentedButton(
                     selected = form.sshAuthMethod == method,
                     onClick = { onChange(form.copy(sshAuthMethod = method)) },
@@ -246,7 +252,7 @@ private fun SshTunnelSection(
                         "connection_editor_ssh_auth_${method.name.lowercase()}",
                     ),
                 ) {
-                    Text(label)
+                    Text(t(labelKey))
                 }
             }
         }
@@ -255,7 +261,7 @@ private fun SshTunnelSection(
             OutlinedTextField(
                 value = form.sshPassword,
                 onValueChange = { onChange(form.copy(sshPassword = it)) },
-                label = { Text("SSH Password") },
+                label = { Text(t(StringKeys.ConnectionEditor.SshPasswordLabel)) },
                 singleLine = true,
                 visualTransformation = if (sshPasswordVisible) {
                     VisualTransformation.None
@@ -289,7 +295,7 @@ private fun SshTunnelSection(
                 OutlinedTextField(
                     value = form.sshPrivateKeyPath,
                     onValueChange = { onChange(form.copy(sshPrivateKeyPath = it)) },
-                    label = { Text("Private Key Path") },
+                    label = { Text(t(StringKeys.ConnectionEditor.SshPrivateKeyPathLabel)) },
                     singleLine = true,
                     readOnly = true,
                     modifier = Modifier
@@ -306,15 +312,15 @@ private fun SshTunnelSection(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Folder,
-                        contentDescription = "选择私钥文件",
+                        contentDescription = t(StringKeys.ConnectionEditor.SshPrivateKeyBrowseDescription),
                     )
-                    Text(" 选择…")
+                    Text(" ${t(StringKeys.ConnectionEditor.SshPrivateKeyBrowse)}")
                 }
             }
             OutlinedTextField(
                 value = form.sshPrivateKey,
                 onValueChange = { onChange(form.copy(sshPrivateKey = it)) },
-                label = { Text("Private Key (PEM)") },
+                label = { Text(t(StringKeys.ConnectionEditor.SshPrivateKeyLabel)) },
                 minLines = 3,
                 isError = fieldErrors.containsKey("sshPrivateKey"),
                 supportingText = fieldErrors["sshPrivateKey"]?.let { { Text(it) } },
@@ -325,7 +331,7 @@ private fun SshTunnelSection(
             OutlinedTextField(
                 value = form.sshPrivateKeyPassphrase,
                 onValueChange = { onChange(form.copy(sshPrivateKeyPassphrase = it)) },
-                label = { Text("Private Key Passphrase") },
+                label = { Text(t(StringKeys.ConnectionEditor.SshPrivateKeyPassphraseLabel)) },
                 singleLine = true,
                 visualTransformation = if (passphraseVisible) {
                     VisualTransformation.None
@@ -353,7 +359,7 @@ private fun SshTunnelSection(
         OutlinedTextField(
             value = form.sshConnectTimeoutMs,
             onValueChange = { onChange(form.copy(sshConnectTimeoutMs = it)) },
-            label = { Text("SSH Connect Timeout (ms)") },
+            label = { Text(t(StringKeys.ConnectionEditor.SshConnectTimeoutLabel)) },
             singleLine = true,
             isError = fieldErrors.containsKey("sshConnectTimeoutMs"),
             supportingText = fieldErrors["sshConnectTimeoutMs"]?.let { { Text(it) } },
@@ -378,7 +384,7 @@ fun AdvancedConnectionSection(
         OutlinedTextField(
             value = form.clientName,
             onValueChange = { onChange(form.copy(clientName = it)) },
-            label = { Text("Client Name") },
+            label = { Text(t(StringKeys.ConnectionEditor.ClientNameLabel)) },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -386,21 +392,21 @@ fun AdvancedConnectionSection(
         )
         TimeoutField(
             value = form.connectTimeoutMs,
-            label = "Connect Timeout (ms)",
+            label = t(StringKeys.ConnectionEditor.ConnectTimeoutLabel),
             error = fieldErrors["connectTimeoutMs"],
             testTag = "connection_editor_connect_timeout",
             onValueChange = { onChange(form.copy(connectTimeoutMs = it)) },
         )
         TimeoutField(
             value = form.commandTimeoutMs,
-            label = "Command Timeout (ms)",
+            label = t(StringKeys.ConnectionEditor.CommandTimeoutLabel),
             error = fieldErrors["commandTimeoutMs"],
             testTag = "connection_editor_command_timeout",
             onValueChange = { onChange(form.copy(commandTimeoutMs = it)) },
         )
         TimeoutField(
             value = form.reconnectTimeoutMs,
-            label = "Reconnect Timeout (ms)",
+            label = t(StringKeys.ConnectionEditor.ReconnectTimeoutLabel),
             error = fieldErrors["reconnectTimeoutMs"],
             testTag = "connection_editor_reconnect_timeout",
             onValueChange = { onChange(form.copy(reconnectTimeoutMs = it)) },
@@ -422,7 +428,7 @@ fun TlsConnectionSection(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("启用 SSL/TLS", modifier = Modifier.weight(1f))
+            Text(t(StringKeys.ConnectionEditor.TlsEnableLabel), modifier = Modifier.weight(1f))
             Switch(
                 checked = form.tlsEnabled,
                 onCheckedChange = { enabled ->
@@ -441,9 +447,9 @@ fun TlsConnectionSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("验证服务端证书")
+                Text(t(StringKeys.ConnectionEditor.TlsVerifyPeerLabel))
                 Text(
-                    "关闭证书校验会降低安全性",
+                    t(StringKeys.ConnectionEditor.TlsVerifyPeerDesc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -473,7 +479,7 @@ fun SentinelConnectionSection(
     ) {
         if (!enabled) {
             Text(
-                "当前部署模式不是 Sentinel。请先在常规配置中选择 Sentinel。",
+                t(StringKeys.ConnectionEditor.SentinelModeHint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -481,7 +487,7 @@ fun SentinelConnectionSection(
         OutlinedTextField(
             value = form.masterName,
             onValueChange = { onChange(form.copy(masterName = it)) },
-            label = { Text("Master Name") },
+            label = { Text(t(StringKeys.ConnectionEditor.MasterNameLabel)) },
             enabled = enabled,
             singleLine = true,
             isError = fieldErrors.containsKey("masterName"),
@@ -490,7 +496,7 @@ fun SentinelConnectionSection(
                 .fillMaxWidth()
                 .testTag("connection_editor_master_name"),
         )
-        Text("Sentinel Nodes", style = MaterialTheme.typography.labelLarge)
+        Text(t(StringKeys.ConnectionEditor.SentinelNodesLabel), style = MaterialTheme.typography.labelLarge)
         HostPortListEditor(
             nodes = form.sentinelNodes,
             enabled = enabled,
@@ -518,12 +524,12 @@ fun ClusterConnectionSection(
     ) {
         if (!enabled) {
             Text(
-                "当前部署模式不是 Cluster。请先在常规配置中选择 Cluster。",
+                t(StringKeys.ConnectionEditor.ClusterModeHint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text("Seed Nodes", style = MaterialTheme.typography.labelLarge)
+        Text(t(StringKeys.ConnectionEditor.ClusterSeedNodesLabel), style = MaterialTheme.typography.labelLarge)
         HostPortListEditor(
             nodes = form.seedNodes,
             enabled = enabled,

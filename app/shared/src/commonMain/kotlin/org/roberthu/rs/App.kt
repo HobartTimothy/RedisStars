@@ -8,6 +8,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.ProvideAppLanguage
+import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.platform.FilePathPicker
 import org.roberthu.rs.platform.TextFileImporter
 import org.roberthu.rs.presentation.AppContainer
@@ -46,23 +49,27 @@ fun App(
     val state by viewModel.state.collectAsState()
     val connectionsState = connectionsViewModel?.state?.collectAsState()?.value
 
-    RedisTheme(darkTheme = state.darkMode) {
-        RedisAppShell(
-            state = state,
-            onAction = viewModel::dispatch,
-            modifier = modifier.fillMaxSize(),
-            connectionState = connectionsState?.connectionState ?: ConnectionState.Disconnected,
-            connectionsContent = {
-                ConnectionsWorkspace(
-                    connections = connectionsViewModel,
-                    browser = keyBrowserViewModel,
-                    detail = keyDetailViewModel,
-                    onImportText = { textFileImporter.importTextFile() },
-                    onPickSshPrivateKeyPath = {
-                        sshPrivateKeyPathPicker.pickFilePath(title = "选择 SSH 私钥")
-                    },
-                )
-            },
-        )
+    ProvideAppLanguage(language = state.language) {
+        RedisTheme(darkTheme = state.darkMode) {
+            RedisAppShell(
+                state = state,
+                onAction = viewModel::dispatch,
+                modifier = modifier.fillMaxSize(),
+                connectionState = connectionsState?.connectionState ?: ConnectionState.Disconnected,
+                connectionsContent = {
+                    ConnectionsWorkspace(
+                        connections = connectionsViewModel,
+                        browser = keyBrowserViewModel,
+                        detail = keyDetailViewModel,
+                        onImportText = { textFileImporter.importTextFile() },
+                        onPickSshPrivateKeyPath = {
+                            sshPrivateKeyPathPicker.pickFilePath(
+                                title = AppI18n.t(StringKeys.ConnectionEditor.SshPickPrivateKeyTitle),
+                            )
+                        },
+                    )
+                },
+            )
+        }
     }
 }

@@ -19,6 +19,8 @@ import org.roberthu.rs.presentation.ConnectionEditorUiState
 import org.roberthu.rs.presentation.ConnectionFormState
 import org.roberthu.rs.presentation.ConnectionsUiState
 import org.roberthu.rs.presentation.HostPortFormState
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.theme.RedisTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -232,7 +234,7 @@ class ConnectionEditorDialogTest {
                         selectedSection = ConnectionEditorSection.General,
                         initialForm = form,
                         form = form.copy(port = ""),
-                        fieldErrors = mapOf("port" to "Port is required"),
+                        fieldErrors = mapOf("port" to AppI18n.t(StringKeys.Validation.PortRequired)),
                     ),
                     onSelectSection = {},
                     onUpdateForm = {},
@@ -247,7 +249,10 @@ class ConnectionEditorDialogTest {
         }
 
         onNodeWithTag("connection_editor_port").assertIsDisplayed()
-        onNodeWithTag("connection_editor_port").assertTextContains("Port is required", substring = true)
+        onNodeWithTag("connection_editor_port").assertTextContains(
+            AppI18n.t(StringKeys.Validation.PortRequired),
+            substring = true,
+        )
     }
 
     @Test

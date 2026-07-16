@@ -39,6 +39,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import org.roberthu.rs.domain.RedisDatabaseSummary
 import org.roberthu.rs.domain.RedisKeyType
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.AddKeyDialogState
 import org.roberthu.rs.theme.color
 
@@ -83,7 +85,7 @@ fun AddKeyDialog(
         modifier = Modifier
             .widthIn(min = 580.dp, max = 680.dp)
             .testTag("add_key_dialog"),
-        title = { Text("添加键") },
+        title = { Text(t(StringKeys.AddKey.Title)) },
         text = {
             Column(
                 modifier = Modifier
@@ -94,7 +96,7 @@ fun AddKeyDialog(
                 OutlinedTextField(
                     value = state.key,
                     onValueChange = onKeyChange,
-                    label = { Text("键名") },
+                    label = { Text(t(StringKeys.AddKey.NameLabel)) },
                     singleLine = true,
                     isError = state.validationErrors.containsKey("key"),
                     modifier = Modifier
@@ -108,7 +110,7 @@ fun AddKeyDialog(
                         onValueChange = {},
                         readOnly = true,
                         enabled = false,
-                        label = { Text("数据库") },
+                        label = { Text(t(StringKeys.AddKey.DatabaseLabel)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 } else {
@@ -118,13 +120,13 @@ fun AddKeyDialog(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         val dbLabel = databases.firstOrNull { it.index == state.database }
-                            ?.let { "db${it.index} (${it.keyCount})" }
+                            ?.let { t(StringKeys.Keys.DatabaseFormat, it.index, it.keyCount) }
                             ?: "db${state.database}"
                         OutlinedTextField(
                             value = dbLabel,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("数据库") },
+                            label = { Text(t(StringKeys.AddKey.DatabaseLabel)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(dbExpanded.value) },
                             modifier = Modifier.menuAnchor().fillMaxWidth().testTag("add_key_database"),
                         )
@@ -134,7 +136,7 @@ fun AddKeyDialog(
                         ) {
                             databases.forEach { db ->
                                 DropdownMenuItem(
-                                    text = { Text("db${db.index} (${db.keyCount})") },
+                                    text = { Text(t(StringKeys.Keys.DatabaseFormat, db.index, db.keyCount)) },
                                     onClick = {
                                         dbExpanded.value = false
                                         onDatabaseChange(db.index)
@@ -154,7 +156,7 @@ fun AddKeyDialog(
                         value = state.type.name,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("类型") },
+                        label = { Text(t(StringKeys.AddKey.TypeLabel)) },
                         leadingIcon = {
                             Box(
                                 modifier = Modifier
@@ -206,7 +208,7 @@ fun AddKeyDialog(
                     OutlinedTextField(
                         value = state.ttlText,
                         onValueChange = onTtlTextChange,
-                        label = { Text("TTL（秒）") },
+                        label = { Text(t(StringKeys.AddKey.TtlLabel)) },
                         enabled = !state.permanent,
                         singleLine = true,
                         modifier = Modifier
@@ -219,7 +221,7 @@ fun AddKeyDialog(
                             onCheckedChange = onPermanentChange,
                             modifier = Modifier.testTag("add_key_permanent"),
                         )
-                        Text("永久")
+                        Text(t(StringKeys.AddKey.Permanent))
                     }
                 }
 
@@ -251,7 +253,7 @@ fun AddKeyDialog(
                     enabled = canSubmit,
                     modifier = Modifier.testTag("add_key_confirm"),
                 ) {
-                    Text("创建")
+                    Text(t(StringKeys.AddKey.Confirm))
                 }
             }
         },
@@ -261,13 +263,13 @@ fun AddKeyDialog(
                     onClick = onImportClick,
                     modifier = Modifier.testTag("add_key_import"),
                 ) {
-                    Text("导入数据")
+                    Text(t(StringKeys.AddKey.Import))
                 }
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.testTag("add_key_cancel"),
                 ) {
-                    Text("取消")
+                    Text(t(StringKeys.AddKey.Cancel))
                 }
             }
         },
@@ -290,7 +292,7 @@ private fun PayloadEditor(
             OutlinedTextField(
                 value = state.stringValue,
                 onValueChange = onStringValueChange,
-                label = { Text("值") },
+                label = { Text(t(StringKeys.AddKey.StringValue)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 80.dp)
@@ -300,8 +302,8 @@ private fun PayloadEditor(
         RedisKeyType.Hash -> {
             PairListEditor(
                 pairs = state.hashFields,
-                firstLabel = "字段",
-                secondLabel = "值",
+                firstLabel = t(StringKeys.AddKey.HashField),
+                secondLabel = t(StringKeys.AddKey.HashValue),
                 onChange = onHashFieldsChange,
                 testTagPrefix = "add_key_hash",
             )
@@ -309,7 +311,7 @@ private fun PayloadEditor(
         RedisKeyType.List -> {
             StringListEditor(
                 values = state.listValues,
-                label = "元素",
+                label = t(StringKeys.AddKey.ListElement),
                 onChange = onListValuesChange,
                 testTagPrefix = "add_key_list",
             )
@@ -317,7 +319,7 @@ private fun PayloadEditor(
         RedisKeyType.Set -> {
             StringListEditor(
                 values = state.setMembers,
-                label = "成员",
+                label = t(StringKeys.AddKey.SetMember),
                 onChange = onSetMembersChange,
                 testTagPrefix = "add_key_set",
             )
@@ -325,8 +327,8 @@ private fun PayloadEditor(
         RedisKeyType.ZSet -> {
             PairListEditor(
                 pairs = state.zsetEntries,
-                firstLabel = "分数",
-                secondLabel = "成员",
+                firstLabel = t(StringKeys.AddKey.ZsetScore),
+                secondLabel = t(StringKeys.AddKey.ZsetMember),
                 onChange = onZsetEntriesChange,
                 testTagPrefix = "add_key_zset",
             )
@@ -334,8 +336,8 @@ private fun PayloadEditor(
         RedisKeyType.Stream -> {
             PairListEditor(
                 pairs = state.streamFields,
-                firstLabel = "字段",
-                secondLabel = "值",
+                firstLabel = t(StringKeys.AddKey.StreamField),
+                secondLabel = t(StringKeys.AddKey.StreamValue),
                 onChange = onStreamFieldsChange,
                 testTagPrefix = "add_key_stream",
             )
@@ -344,7 +346,7 @@ private fun PayloadEditor(
             OutlinedTextField(
                 value = state.jsonContent,
                 onValueChange = onJsonContentChange,
-                label = { Text("JSON 内容") },
+                label = { Text(t(StringKeys.AddKey.JsonContent)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp)
@@ -388,7 +390,7 @@ private fun StringListEditor(
                 }
             }
         }
-        TextButton(onClick = { onChange(values + "") }) { Text("添加行") }
+        TextButton(onClick = { onChange(values + "") }) { Text(t(StringKeys.AddKey.AddRow)) }
     }
 }
 
@@ -433,7 +435,7 @@ private fun PairListEditor(
                 }
             }
         }
-        TextButton(onClick = { onChange(pairs + ("" to "")) }) { Text("添加行") }
+        TextButton(onClick = { onChange(pairs + ("" to "")) }) { Text(t(StringKeys.AddKey.AddRow)) }
     }
 }
 

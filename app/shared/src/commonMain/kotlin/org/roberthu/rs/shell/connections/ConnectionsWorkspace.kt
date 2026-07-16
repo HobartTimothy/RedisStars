@@ -13,6 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.roberthu.rs.domain.DeploymentMode
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.presentation.ConnectionsViewModel
 import org.roberthu.rs.presentation.KeyBrowserViewModel
@@ -33,7 +35,7 @@ fun ConnectionsWorkspace(
     if (connections == null || browser == null || detail == null) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                "Redis access is unavailable in this preview.",
+                t(StringKeys.Connections.UnavailablePreview),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

@@ -39,6 +39,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
+import org.roberthu.rs.presentation.ConnectionEditorMode
 import org.roberthu.rs.presentation.ConnectionEditorSection
 import org.roberthu.rs.presentation.ConnectionEditorUiState
 import org.roberthu.rs.presentation.ConnectionFormState
@@ -86,7 +89,10 @@ fun ConnectionEditorDialog(
                     .background(MaterialTheme.colorScheme.surface),
             ) {
                 EditorHeader(
-                    title = state.title,
+                    title = when (state.mode) {
+                        ConnectionEditorMode.Create -> t(StringKeys.ConnectionEditor.TitleNew)
+                        ConnectionEditorMode.Edit -> t(StringKeys.ConnectionEditor.TitleEdit)
+                    },
                     onClose = onRequestClose,
                 )
                 HorizontalDivider()
@@ -124,7 +130,7 @@ fun ConnectionEditorDialog(
                         }
                         if (state.testSucceeded) {
                             Text(
-                                text = "连接测试成功",
+                                text = t(StringKeys.ConnectionEditor.TestSuccess),
                                 color = MaterialTheme.colorScheme.primary,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.testTag("connection_editor_test_success"),
@@ -181,14 +187,14 @@ fun ConnectionEditorDialog(
     if (state.confirmDiscardVisible) {
         AlertDialog(
             onDismissRequest = onDismissDiscard,
-            title = { Text("放弃未保存修改？") },
-            text = { Text("当前表单有未保存的修改，关闭将丢失这些更改。") },
+            title = { Text(t(StringKeys.ConnectionEditor.DiscardTitle)) },
+            text = { Text(t(StringKeys.ConnectionEditor.DiscardMessage)) },
             confirmButton = {
                 Button(
                     onClick = onConfirmDiscard,
                     modifier = Modifier.testTag("connection_editor_discard_confirm"),
                 ) {
-                    Text("放弃")
+                    Text(t(StringKeys.ConnectionEditor.DiscardConfirm))
                 }
             },
             dismissButton = {
@@ -196,7 +202,7 @@ fun ConnectionEditorDialog(
                     onClick = onDismissDiscard,
                     modifier = Modifier.testTag("connection_editor_discard_cancel"),
                 ) {
-                    Text("继续编辑")
+                    Text(t(StringKeys.ConnectionEditor.DiscardContinueEditing))
                 }
             },
         )
@@ -226,7 +232,7 @@ private fun EditorHeader(
             onClick = onClose,
             modifier = Modifier.testTag("connection_editor_close"),
         ) {
-            Icon(Icons.Filled.Close, contentDescription = "Close")
+            Icon(Icons.Filled.Close, contentDescription = t(StringKeys.ConnectionEditor.Close))
         }
     }
 }
@@ -238,15 +244,15 @@ private fun SectionNavigation(
     modifier: Modifier = Modifier,
 ) {
     val items = listOf(
-        ConnectionEditorSection.General to ("常规配置" to "connection_editor_section_general"),
-        ConnectionEditorSection.Advanced to ("高级配置" to "connection_editor_section_advanced"),
-        ConnectionEditorSection.Tls to ("SSL/TLS" to "connection_editor_section_tls"),
-        ConnectionEditorSection.Sentinel to ("哨兵模式" to "connection_editor_section_sentinel"),
-        ConnectionEditorSection.Cluster to ("集群模式" to "connection_editor_section_cluster"),
+        ConnectionEditorSection.General to (StringKeys.ConnectionEditor.SectionGeneral to "connection_editor_section_general"),
+        ConnectionEditorSection.Advanced to (StringKeys.ConnectionEditor.SectionAdvanced to "connection_editor_section_advanced"),
+        ConnectionEditorSection.Tls to (StringKeys.ConnectionEditor.SectionTls to "connection_editor_section_tls"),
+        ConnectionEditorSection.Sentinel to (StringKeys.ConnectionEditor.SectionSentinel to "connection_editor_section_sentinel"),
+        ConnectionEditorSection.Cluster to (StringKeys.ConnectionEditor.SectionCluster to "connection_editor_section_cluster"),
     )
     Column(modifier = modifier.padding(vertical = 8.dp)) {
         items.forEach { (section, labelAndTag) ->
-            val (label, tag) = labelAndTag
+            val (labelKey, tag) = labelAndTag
             val isSelected = section == selected
             Row(
                 modifier = Modifier
@@ -276,7 +282,7 @@ private fun SectionNavigation(
                         ),
                 )
                 Text(
-                    text = label,
+                    text = t(labelKey),
                     color = if (isSelected) {
                         MaterialTheme.colorScheme.primary
                     } else {
@@ -321,7 +327,7 @@ private fun EditorFooter(
                     strokeWidth = 2.dp,
                 )
             }
-            Text("测试连接")
+            Text(t(StringKeys.ConnectionEditor.TestConnection))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(
@@ -329,14 +335,14 @@ private fun EditorFooter(
                 enabled = !busy,
                 modifier = Modifier.testTag("connection_editor_parse_url"),
             ) {
-                Text("解析剪贴板中的 URL")
+                Text(t(StringKeys.ConnectionEditor.ParseClipboardUrl))
             }
             TextButton(
                 onClick = onCancel,
                 enabled = !busy,
                 modifier = Modifier.testTag("connection_editor_cancel"),
             ) {
-                Text("取消")
+                Text(t(StringKeys.ConnectionEditor.Cancel))
             }
             Button(
                 onClick = onSave,
@@ -351,7 +357,7 @@ private fun EditorFooter(
                         strokeWidth = 2.dp,
                     )
                 }
-                Text("确认")
+                Text(t(StringKeys.ConnectionEditor.Save))
             }
         }
     }

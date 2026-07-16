@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import org.roberthu.rs.domain.BinarySafeString
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.KeyContent
 import org.roberthu.rs.presentation.KeyDetailUiState
 
@@ -50,7 +52,8 @@ fun KeyDetailScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                state.deletedKey?.let { "Deleted “$it”." } ?: "Select a key to inspect its value.",
+                state.deletedKey?.let { t(StringKeys.KeyDetail.DeletedMessage, it) }
+                    ?: t(StringKeys.KeyDetail.SelectPrompt),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag("key_detail_empty"),
             )
@@ -82,9 +85,11 @@ fun KeyDetailScreen(
                 )
             }
             Row {
-                TextButton(onClick = onRefresh, enabled = !state.loading) { Text("Refresh") }
+                TextButton(onClick = onRefresh, enabled = !state.loading) {
+                    Text(t(StringKeys.KeyDetail.Refresh))
+                }
                 TextButton(onClick = onRequestDelete) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(t(StringKeys.KeyDetail.Delete), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -101,10 +106,13 @@ fun KeyDetailScreen(
             CircularProgressIndicator()
         } else {
             state.metadata?.let { metadata ->
+                val ttlDisplay = metadata.ttlSeconds?.let { t(StringKeys.KeyDetail.TtlValueSeconds, it) }
+                    ?: t(StringKeys.Common.Persistent)
+                val memoryDisplay = metadata.memoryBytes?.let { t(StringKeys.KeyDetail.MemoryValueBytes, it) }
+                    ?: t(StringKeys.Common.Unknown)
+                val encodingDisplay = metadata.encoding ?: t(StringKeys.Common.Unknown)
                 Text(
-                    "TTL: ${metadata.ttlSeconds?.let { "$it s" } ?: "persistent"}" +
-                        "  ·  Memory: ${metadata.memoryBytes?.let { "$it B" } ?: "unknown"}" +
-                        "  ·  Encoding: ${metadata.encoding ?: "unknown"}",
+                    t(StringKeys.KeyDetail.MetadataSummary, ttlDisplay, memoryDisplay, encodingDisplay),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -112,30 +120,30 @@ fun KeyDetailScreen(
                 OutlinedTextField(
                     value = rename,
                     onValueChange = { rename = it },
-                    label = { Text("Key name") },
+                    label = { Text(t(StringKeys.KeyDetail.KeyNameLabel)) },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedButton(
                     onClick = { onRename(rename) },
                     enabled = rename.isNotBlank() && rename != key.key && !state.saving,
-                ) { Text("Rename") }
+                ) { Text(t(StringKeys.KeyDetail.Rename)) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = ttlText,
                     onValueChange = { ttlText = it },
-                    label = { Text("TTL seconds") },
-                    placeholder = { Text("Persistent") },
+                    label = { Text(t(StringKeys.KeyDetail.TtlSecondsLabel)) },
+                    placeholder = { Text(t(StringKeys.KeyDetail.TtlPlaceholderPersistent)) },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedButton(
                     onClick = { ttlText.toLongOrNull()?.let(onSetTtl) },
                     enabled = ttlText.toLongOrNull()?.let { it >= 0 } == true && !state.saving,
-                ) { Text("Set TTL") }
+                ) { Text(t(StringKeys.KeyDetail.SetTtl)) }
                 TextButton(onClick = { onSetTtl(null) }, enabled = !state.saving) {
-                    Text("Persist")
+                    Text(t(StringKeys.KeyDetail.Persist))
                 }
             }
             KeyContentView(
@@ -149,13 +157,13 @@ fun KeyDetailScreen(
     if (state.confirmDelete) {
         AlertDialog(
             onDismissRequest = onDismissDelete,
-            title = { Text("Delete key?") },
-            text = { Text("Permanently delete “${key.key}”? This cannot be undone.") },
+            title = { Text(t(StringKeys.KeyDetail.DeleteTitle)) },
+            text = { Text(t(StringKeys.KeyDetail.DeleteMessage, key.key)) },
             confirmButton = {
-                Button(onClick = onConfirmDelete) { Text("Delete key") }
+                Button(onClick = onConfirmDelete) { Text(t(StringKeys.KeyDetail.DeleteConfirm)) }
             },
             dismissButton = {
-                TextButton(onClick = onDismissDelete) { Text("Cancel") }
+                TextButton(onClick = onDismissDelete) { Text(t(StringKeys.KeyDetail.Cancel)) }
             },
         )
     }
@@ -175,7 +183,7 @@ private fun KeyContentView(
             OutlinedTextField(
                 value = value,
                 onValueChange = { value = it },
-                label = { Text("String value") },
+                label = { Text(t(StringKeys.KeyDetail.StringValueLabel)) },
                 readOnly = content.value.utf8 == null,
                 minLines = 6,
                 modifier = Modifier.fillMaxWidth().testTag("string_value"),
@@ -183,10 +191,10 @@ private fun KeyContentView(
             Button(
                 onClick = { onSaveString(value) },
                 enabled = content.value.utf8 != null && !content.value.truncated && !saving,
-            ) { Text("Save value") }
+            ) { Text(t(StringKeys.KeyDetail.SaveValue)) }
         }
         is KeyContent.HashValue -> {
-            Text("Hash entries (${content.entries.size} shown)")
+            Text(t(StringKeys.KeyDetail.HashEntriesCount, content.entries.size))
             content.entries.forEach { entry ->
                 BinaryWarnings(entry.field)
                 BinaryWarnings(entry.value)
@@ -194,21 +202,21 @@ private fun KeyContentView(
             }
         }
         is KeyContent.ListValue -> {
-            Text("List entries (${content.entries.size} shown)")
+            Text(t(StringKeys.KeyDetail.ListEntriesCount, content.entries.size))
             content.entries.forEachIndexed { index, value ->
                 BinaryWarnings(value)
                 Text("$index  ${display(value)}")
             }
         }
         is KeyContent.SetValue -> {
-            Text("Set members (${content.members.size} shown)")
+            Text(t(StringKeys.KeyDetail.SetMembersCount, content.members.size))
             content.members.forEach {
                 BinaryWarnings(it)
                 Text(display(it))
             }
         }
         is KeyContent.ZSetValue -> {
-            Text("Sorted-set entries (${content.entries.size} shown)")
+            Text(t(StringKeys.KeyDetail.ZsetEntriesCount, content.entries.size))
             content.entries.forEach {
                 BinaryWarnings(it.member)
                 Text("${it.score}  ${display(it.member)}")
@@ -224,10 +232,10 @@ private fun KeyContentView(
 @Composable
 private fun BinaryWarnings(value: BinarySafeString) {
     if (value.utf8 == null) {
-        WarningBanner("Binary value — showing Base64. Editing is disabled.")
+        WarningBanner(t(StringKeys.KeyDetail.BinaryWarning))
     }
     if (value.truncated) {
-        WarningBanner("Value truncated for safety. Editing is disabled.")
+        WarningBanner(t(StringKeys.KeyDetail.TruncatedWarning))
     }
 }
 

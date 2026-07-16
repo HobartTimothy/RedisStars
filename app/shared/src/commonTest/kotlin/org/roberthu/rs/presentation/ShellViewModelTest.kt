@@ -3,6 +3,9 @@ package org.roberthu.rs.presentation
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.roberthu.rs.domain.AppLanguage
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.platform.resolveInitialAppLanguage
 import org.roberthu.rs.port.UserSettings
 import org.roberthu.rs.port.UserSettingsStore
 import org.roberthu.rs.shell.ShellDestination
@@ -64,6 +67,37 @@ class ShellViewModelTest {
         assertEquals(
             UserSettings(darkMode = false, autoConnect = true),
             store.savedSettings,
+        )
+    }
+
+    @Test
+    fun setLanguage_persistsAndUpdatesUiState() = runTest {
+        val store = FakeUserSettingsStore(
+            UserSettings(darkMode = false, language = "en-US"),
+        )
+        val viewModel = ShellViewModel(store, this)
+        advanceUntilIdle()
+
+        viewModel.dispatch(ShellUiAction.SetLanguage(AppLanguage.ZhCN))
+        advanceUntilIdle()
+
+        assertEquals(AppLanguage.ZhCN, viewModel.state.value.language)
+        assertEquals(AppLanguage.ZhCN, AppI18n.language)
+        assertEquals(
+            UserSettings(darkMode = false, language = "zh-CN"),
+            store.savedSettings,
+        )
+    }
+
+    @Test
+    fun load_withoutStoredLanguage_keepsResolvedLanguage() = runTest {
+        val store = FakeUserSettingsStore(UserSettings(language = null))
+        val viewModel = ShellViewModel(store, this)
+        advanceUntilIdle()
+
+        assertEquals(
+            resolveInitialAppLanguage(storedTag = null),
+            viewModel.state.value.language,
         )
     }
 

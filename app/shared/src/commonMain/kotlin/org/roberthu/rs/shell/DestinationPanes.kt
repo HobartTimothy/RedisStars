@@ -7,12 +7,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.t
 
 @Composable
 fun MonitorPane(modifier: Modifier = Modifier) {
     PlaceholderDestination(
-        title = "实时监控",
-        subtitle = "Monitor placeholder",
+        title = t(StringKeys.Monitor.Title),
+        subtitle = t(StringKeys.Monitor.Placeholder),
         modifier = modifier,
     )
 }
@@ -20,8 +22,8 @@ fun MonitorPane(modifier: Modifier = Modifier) {
 @Composable
 fun SlowLogPane(modifier: Modifier = Modifier) {
     PlaceholderDestination(
-        title = "慢日志",
-        subtitle = "Slow log placeholder",
+        title = t(StringKeys.SlowLog.Title),
+        subtitle = t(StringKeys.SlowLog.Placeholder),
         modifier = modifier,
     )
 }

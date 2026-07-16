@@ -100,6 +100,8 @@ private data class StoredSettings(
     val recentConnectionId: String? = null,
     val rememberPasswords: Boolean = true,
     val remoteBaseUrl: String = "http://127.0.0.1:8080",
+    /** Canonical tag (`zh-CN` / `en-US`), or omitted/null for legacy configs. */
+    val language: String? = null,
 ) {
     fun toDomain() = UserSettings(
         darkMode = darkMode,
@@ -107,6 +109,7 @@ private data class StoredSettings(
         recentConnectionId = recentConnectionId,
         rememberPasswords = rememberPasswords,
         remoteBaseUrl = remoteBaseUrl,
+        language = language,
     )
 
     companion object {
@@ -116,6 +119,7 @@ private data class StoredSettings(
             settings.recentConnectionId,
             settings.rememberPasswords,
             settings.remoteBaseUrl,
+            settings.language,
         )
     }
 }

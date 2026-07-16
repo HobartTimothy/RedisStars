@@ -7,6 +7,9 @@ import org.roberthu.rs.domain.SshAuthMethod
 import org.roberthu.rs.domain.SshTunnelOptions
 import org.roberthu.rs.domain.TimeoutOptions
 import org.roberthu.rs.domain.TlsOptions
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.ValidationI18n
 
 enum class ConnectionEditorMode {
     Create,
@@ -60,7 +63,7 @@ data class ConnectionFormState(
         val fieldErrors = linkedMapOf<String, String>()
 
         if (name.isBlank()) {
-            fieldErrors["name"] = "Name must not be blank"
+            fieldErrors["name"] = AppI18n.t(StringKeys.Validation.NameRequired)
         }
 
         val portValue = when (deploymentMode) {
@@ -68,16 +71,31 @@ data class ConnectionFormState(
             else -> null
         }
         val databaseValue = 0
-        val connectTimeout = parsePositiveLong(connectTimeoutMs, "connectTimeoutMs", "Connect timeout", fieldErrors)
-        val commandTimeout = parsePositiveLong(commandTimeoutMs, "commandTimeoutMs", "Command timeout", fieldErrors)
-        val reconnectTimeout = parsePositiveLong(reconnectTimeoutMs, "reconnectTimeoutMs", "Reconnect timeout", fieldErrors)
+        val connectTimeout = parsePositiveLong(
+            connectTimeoutMs,
+            "connectTimeoutMs",
+            AppI18n.t(StringKeys.ConnectionEditor.ConnectTimeoutLabel),
+            fieldErrors,
+        )
+        val commandTimeout = parsePositiveLong(
+            commandTimeoutMs,
+            "commandTimeoutMs",
+            AppI18n.t(StringKeys.ConnectionEditor.CommandTimeoutLabel),
+            fieldErrors,
+        )
+        val reconnectTimeout = parsePositiveLong(
+            reconnectTimeoutMs,
+            "reconnectTimeoutMs",
+            AppI18n.t(StringKeys.ConnectionEditor.ReconnectTimeoutLabel),
+            fieldErrors,
+        )
 
         val sentinel = when (deploymentMode) {
             DeploymentMode.Sentinel -> parseHostPortList(
                 nodes = sentinelNodes,
                 listKey = "sentinelNodes",
-                emptyMessage = "At least one sentinel node is required",
-                itemLabel = "Sentinel node",
+                emptyMessage = AppI18n.t(StringKeys.Validation.SentinelNodeRequired),
+                itemLabel = AppI18n.t(StringKeys.Validation.SentinelNodeItem),
                 fieldErrors = fieldErrors,
             )
             else -> emptyList()
@@ -86,18 +104,18 @@ data class ConnectionFormState(
             DeploymentMode.Cluster -> parseHostPortList(
                 nodes = seedNodes,
                 listKey = "seedNodes",
-                emptyMessage = "At least one seed node is required",
-                itemLabel = "Seed node",
+                emptyMessage = AppI18n.t(StringKeys.Validation.ClusterNodeRequired),
+                itemLabel = AppI18n.t(StringKeys.Validation.SeedNodeItem),
                 fieldErrors = fieldErrors,
             )
             else -> emptyList()
         }
 
         if (deploymentMode == DeploymentMode.Sentinel && masterName.isBlank()) {
-            fieldErrors["masterName"] = "Master name must not be blank"
+            fieldErrors["masterName"] = AppI18n.t(StringKeys.Validation.MasterNameRequired)
         }
         if (deploymentMode == DeploymentMode.Standalone && host.isBlank()) {
-            fieldErrors["host"] = "Host must not be blank"
+            fieldErrors["host"] = AppI18n.t(StringKeys.Validation.HostRequired)
         }
 
         val sshEnabledEffective = sshEnabled && deploymentMode == DeploymentMode.Standalone
@@ -105,27 +123,27 @@ data class ConnectionFormState(
         var sshConnectTimeout: Long? = null
         if (sshEnabledEffective) {
             if (sshHost.isBlank()) {
-                fieldErrors["sshHost"] = "SSH host must not be blank"
+                fieldErrors["sshHost"] = AppI18n.t(StringKeys.Validation.SshHostRequired)
             }
             sshPortValue = parsePort(sshPort, "sshPort", fieldErrors)
             if (sshUsername.isBlank()) {
-                fieldErrors["sshUsername"] = "SSH username must not be blank"
+                fieldErrors["sshUsername"] = AppI18n.t(StringKeys.Validation.SshUsernameRequired)
             }
             sshConnectTimeout = parsePositiveLong(
                 sshConnectTimeoutMs,
                 "sshConnectTimeoutMs",
-                "SSH connect timeout",
+                AppI18n.t(StringKeys.ConnectionEditor.SshConnectTimeoutLabel),
                 fieldErrors,
             )
             when (sshAuthMethod) {
                 SshAuthMethod.Password -> {
                     if (sshPassword.isBlank()) {
-                        fieldErrors["sshPassword"] = "SSH password must not be blank"
+                        fieldErrors["sshPassword"] = AppI18n.t(StringKeys.Validation.SshPasswordRequired)
                     }
                 }
                 SshAuthMethod.PrivateKey -> {
                     if (sshPrivateKey.isBlank() && sshPrivateKeyPath.isBlank()) {
-                        fieldErrors["sshPrivateKey"] = "SSH private key or private key path is required"
+                        fieldErrors["sshPrivateKey"] = AppI18n.t(StringKeys.Validation.SshPrivateKeyRequired)
                     }
                 }
             }
@@ -173,7 +191,7 @@ data class ConnectionFormState(
             groupId = groupId,
         )
 
-        val domainErrors = profile.validate()
+        val domainErrors = profile.validate().map(ValidationI18n::localize)
         if (domainErrors.isNotEmpty()) {
             return ConnectionFormConversionResult.Failure(
                 fieldErrors = emptyMap(),
@@ -277,7 +295,10 @@ sealed class ConnectionFormConversionResult {
 
     fun getOrThrow(): ConnectionProfile = when (this) {
         is Success -> profile
-        is Failure -> error(globalError ?: fieldErrors.values.firstOrNull() ?: "Invalid connection form")
+        is Failure -> error(
+            globalError ?: fieldErrors.values.firstOrNull()
+                ?: AppI18n.t(StringKeys.Errors.ValidationFailed),
+        )
     }
 }
 
@@ -299,8 +320,8 @@ data class ConnectionEditorUiState(
 
     val title: String
         get() = when (mode) {
-            ConnectionEditorMode.Create -> "新建连接"
-            ConnectionEditorMode.Edit -> "编辑连接"
+            ConnectionEditorMode.Create -> AppI18n.t(StringKeys.ConnectionEditor.TitleNew)
+            ConnectionEditorMode.Edit -> AppI18n.t(StringKeys.ConnectionEditor.TitleEdit)
         }
 }
 
@@ -310,16 +331,16 @@ private fun parsePort(
     fieldErrors: MutableMap<String, String>,
 ): Int? {
     if (raw.isBlank()) {
-        fieldErrors[key] = "Port is required"
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.PortRequired)
         return null
     }
     val value = raw.toIntOrNull()
     if (value == null) {
-        fieldErrors[key] = "Port must be a number"
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.PortInvalidNumber)
         return null
     }
     if (value !in 1..65535) {
-        fieldErrors[key] = "Port must be between 1 and 65535"
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.PortRange)
         return null
     }
     return value
@@ -332,16 +353,16 @@ private fun parseNonNegativeInt(
     fieldErrors: MutableMap<String, String>,
 ): Int? {
     if (raw.isBlank()) {
-        fieldErrors[key] = "$label is required"
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.LabelRequired, label)
         return null
     }
     val value = raw.toIntOrNull()
     if (value == null) {
-        fieldErrors[key] = "$label must be a number"
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.LabelInvalidNumber, label)
         return null
     }
     if (value < 0) {
-        fieldErrors[key] = "$label must be 0 or greater"
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.LabelMinZero, label)
         return null
     }
     return value
@@ -354,16 +375,16 @@ private fun parsePositiveLong(
     fieldErrors: MutableMap<String, String>,
 ): Long? {
     if (raw.isBlank()) {
-        fieldErrors[key] = "$label is required"
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.LabelRequired, label)
         return null
     }
     val value = raw.toLongOrNull()
     if (value == null) {
-        fieldErrors[key] = "$label must be a number"
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.LabelInvalidNumber, label)
         return null
     }
     if (value <= 0) {
-        fieldErrors[key] = "$label must be greater than 0"
+        fieldErrors[key] = AppI18n.t(StringKeys.Validation.LabelGreaterThanZero, label)
         return null
     }
     return value
@@ -385,7 +406,7 @@ private fun parseHostPortList(
         val hostKey = "$listKey.$index.host"
         val portKey = "$listKey.$index.port"
         if (node.host.isBlank()) {
-            fieldErrors[hostKey] = "$itemLabel ${index + 1} host must not be blank"
+            fieldErrors[hostKey] = AppI18n.t(StringKeys.Validation.NodeHostRequired, itemLabel, index + 1)
         }
         val port = parsePort(node.port, portKey, fieldErrors)
         if (node.host.isNotBlank() && port != null) {

@@ -4,12 +4,14 @@ import java.awt.FileDialog
 import java.awt.Frame
 import java.io.FilenameFilter
 import java.nio.file.Path
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.platform.FilePathPicker
 
 fun awtSshPrivateKeyPathPicker(): FilePathPicker = FilePathPicker { title ->
     val dialog = FileDialog(
         null as Frame?,
-        title.ifBlank { "选择 SSH 私钥" },
+        title.ifBlank { AppI18n.t(StringKeys.ConnectionEditor.SshPickPrivateKeyTitle) },
         FileDialog.LOAD,
     )
     dialog.isMultipleMode = false

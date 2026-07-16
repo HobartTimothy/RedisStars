@@ -13,10 +13,10 @@ data class ConnectionGroup(
     fun validate(existingNames: Collection<String> = emptyList()): List<String> = buildList {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
-            add("组名称不能为空")
+            add("validation.group_name_empty")
         }
         if (existingNames.any { it.equals(trimmed, ignoreCase = false) }) {
-            add("同级已存在相同的组名称")
+            add("validation.group_name_duplicate")
         }
     }
 }

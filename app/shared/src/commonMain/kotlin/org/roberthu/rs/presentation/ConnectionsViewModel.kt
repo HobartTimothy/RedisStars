@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.i18n.AppI18n
+import org.roberthu.rs.i18n.StringKeys
+import org.roberthu.rs.i18n.ValidationI18n
 import org.roberthu.rs.port.ConnectionProfileStore
 import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.port.RedisConnectionPort
@@ -125,7 +128,7 @@ class ConnectionsViewModel(
         ).validate(existingNames)
         if (validationErrors.isNotEmpty()) {
             mutableState.update {
-                it.copy(groupDialog = dialog.copy(error = validationErrors.first()))
+                it.copy(groupDialog = dialog.copy(error = AppI18n.t(validationErrors.first())))
             }
             return
         }
@@ -152,7 +155,11 @@ class ConnectionsViewModel(
                 }
                 .onFailure { error ->
                     mutableState.update {
-                        it.copy(groupDialog = dialog.copy(error = error.message))
+                        it.copy(
+                            groupDialog = dialog.copy(
+                                error = error.message?.let(ValidationI18n::localizeJoin) ?: error.message,
+                            ),
+                        )
                     }
                 }
         }
@@ -296,7 +303,8 @@ class ConnectionsViewModel(
                         updateEditor {
                             it.copy(
                                 saving = false,
-                                globalError = error.message ?: "Failed to save connection",
+                                globalError = error.message
+                                    ?: AppI18n.t(StringKeys.Errors.SaveConnectionFailed),
                             )
                         }
                     }
@@ -344,7 +352,8 @@ class ConnectionsViewModel(
                             it.copy(
                                 testing = false,
                                 testSucceeded = false,
-                                globalError = error.message ?: "Connection test failed",
+                                globalError = error.message
+                                    ?: AppI18n.t(StringKeys.Errors.ConnectionTestFailed),
                             )
                         }
                     }
@@ -434,7 +443,10 @@ class ConnectionsViewModel(
 
     private fun showListError(error: Throwable) {
         mutableState.update {
-            it.copy(error = error.message ?: "Connection operation failed", busy = false)
+            it.copy(
+                error = error.message ?: AppI18n.t(StringKeys.Errors.ConnectionOperationFailed),
+                busy = false,
+            )
         }
     }
 
