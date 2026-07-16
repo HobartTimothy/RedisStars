@@ -5,9 +5,12 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
+import org.roberthu.rs.domain.RedisDatabaseSummary
 import org.roberthu.rs.domain.RedisKeySummary
 import org.roberthu.rs.domain.RedisKeyType
+import org.roberthu.rs.presentation.AddKeyDialogState
 import org.roberthu.rs.presentation.KeyBrowserUiState
+import org.roberthu.rs.shell.keys.AddKeyDialog
 import org.roberthu.rs.shell.keys.KeyBrowserScreen
 import org.roberthu.rs.theme.RedisTheme
 import kotlin.test.Test
@@ -31,6 +34,8 @@ class KeyBrowserScreenTest {
                     onLoadMore = { clicked = true },
                     onCancel = {},
                     onSelect = {},
+                    onOpenAddKey = {},
+                    onSelectDatabase = {},
                 )
             }
         }
@@ -51,6 +56,8 @@ class KeyBrowserScreenTest {
                     onLoadMore = {},
                     onCancel = {},
                     onSelect = {},
+                    onOpenAddKey = {},
+                    onSelectDatabase = {},
                 )
             }
         }
@@ -70,10 +77,71 @@ class KeyBrowserScreenTest {
                     onLoadMore = {},
                     onCancel = {},
                     onSelect = {},
+                    onOpenAddKey = {},
+                    onSelectDatabase = {},
                 )
             }
         }
 
         onNodeWithTag("key_list_empty").assertIsDisplayed()
+    }
+
+    @Test
+    fun databaseDropdown_isDisplayed() = runComposeUiTest {
+        setContent {
+            RedisTheme(darkTheme = true) {
+                KeyBrowserScreen(
+                    state = KeyBrowserUiState(
+                        databases = listOf(
+                            RedisDatabaseSummary(0, 5),
+                            RedisDatabaseSummary(1, 12),
+                        ),
+                        selectedDatabase = 0,
+                    ),
+                    enabled = true,
+                    onPatternChange = {},
+                    onRefresh = {},
+                    onLoadMore = {},
+                    onCancel = {},
+                    onSelect = {},
+                    onOpenAddKey = {},
+                    onSelectDatabase = {},
+                )
+            }
+        }
+
+        onNodeWithTag("keys_database_dropdown").assertIsDisplayed()
+    }
+
+    @Test
+    fun addKeyDialog_opensWithFields() = runComposeUiTest {
+        setContent {
+            RedisTheme(darkTheme = true) {
+                AddKeyDialog(
+                    state = AddKeyDialogState(),
+                    databases = listOf(RedisDatabaseSummary(0, 0)),
+                    clusterMode = false,
+                    onDismiss = {},
+                    onKeyChange = {},
+                    onDatabaseChange = {},
+                    onTypeChange = {},
+                    onTtlTextChange = {},
+                    onPermanentChange = {},
+                    onStringValueChange = {},
+                    onHashFieldsChange = {},
+                    onListValuesChange = {},
+                    onSetMembersChange = {},
+                    onZsetEntriesChange = {},
+                    onStreamFieldsChange = {},
+                    onJsonContentChange = {},
+                    onImportClick = {},
+                    onSubmit = {},
+                )
+            }
+        }
+
+        onNodeWithTag("add_key_dialog").assertIsDisplayed()
+        onNodeWithTag("add_key_name").assertIsDisplayed()
+        onNodeWithTag("add_key_type").assertIsDisplayed()
     }
 }

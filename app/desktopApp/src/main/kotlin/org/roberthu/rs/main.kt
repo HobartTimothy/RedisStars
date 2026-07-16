@@ -31,7 +31,12 @@ fun main() {
             icon = appIcon,
             state = rememberWindowState(width = 1280.dp, height = 800.dp),
         ) {
-            App(container = root.container, modifier = Modifier.fillMaxSize())
+            App(
+                container = root.container,
+                modifier = Modifier.fillMaxSize(),
+                textFileImporter = awtTextFileImporter(),
+                sshPrivateKeyPathPicker = awtSshPrivateKeyPathPicker(),
+            )
         }
     }
 }

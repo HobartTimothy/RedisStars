@@ -7,6 +7,7 @@ enum class RedisKeyType {
     Set,
     ZSet,
     Stream,
+    Json,
     Other,
     Unknown,
 }

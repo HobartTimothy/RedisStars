@@ -54,6 +54,7 @@ data class ConnectionFormState(
     val sshPrivateKeyPath: String = "",
     val sshPrivateKeyPassphrase: String = "",
     val sshConnectTimeoutMs: String = "10000",
+    val groupId: String? = null,
 ) {
     fun toConnectionProfile(id: String): ConnectionFormConversionResult {
         val fieldErrors = linkedMapOf<String, String>()
@@ -66,10 +67,7 @@ data class ConnectionFormState(
             DeploymentMode.Standalone -> parsePort(port, "port", fieldErrors)
             else -> null
         }
-        val databaseValue = when {
-            deploymentMode == DeploymentMode.Cluster -> 0
-            else -> parseNonNegativeInt(database, "database", "Database", fieldErrors)
-        }
+        val databaseValue = 0
         val connectTimeout = parsePositiveLong(connectTimeoutMs, "connectTimeoutMs", "Connect timeout", fieldErrors)
         val commandTimeout = parsePositiveLong(commandTimeoutMs, "commandTimeoutMs", "Command timeout", fieldErrors)
         val reconnectTimeout = parsePositiveLong(reconnectTimeoutMs, "reconnectTimeoutMs", "Reconnect timeout", fieldErrors)
@@ -146,7 +144,7 @@ data class ConnectionFormState(
             seedNodes = seeds,
             sentinelNodes = sentinel,
             masterName = if (deploymentMode == DeploymentMode.Sentinel) masterName.trim() else "",
-            database = databaseValue ?: 0,
+            database = databaseValue,
             username = username.trim().ifBlank { null },
             password = password.ifBlank { null },
             tls = TlsOptions(enabled = tlsEnabled, verifyPeer = verifyPeer),
@@ -172,6 +170,7 @@ data class ConnectionFormState(
             } else {
                 SshTunnelOptions()
             },
+            groupId = groupId,
         )
 
         val domainErrors = profile.validate()
@@ -247,6 +246,7 @@ data class ConnectionFormState(
             sshPrivateKeyPath = profile.ssh.privateKeyPath.orEmpty(),
             sshPrivateKeyPassphrase = profile.ssh.privateKeyPassphrase.orEmpty(),
             sshConnectTimeoutMs = profile.ssh.connectTimeoutMs.toString(),
+            groupId = profile.groupId,
         )
 
         fun newNodeId(): String = "node-${nodeSequence++}"
@@ -287,6 +287,7 @@ data class ConnectionEditorUiState(
     val selectedSection: ConnectionEditorSection,
     val initialForm: ConnectionFormState,
     val form: ConnectionFormState,
+    val pendingGroupId: String? = null,
     val fieldErrors: Map<String, String> = emptyMap(),
     val globalError: String? = null,
     val testing: Boolean = false,

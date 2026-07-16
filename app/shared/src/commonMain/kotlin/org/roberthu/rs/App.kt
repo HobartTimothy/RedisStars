@@ -8,6 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import org.roberthu.rs.platform.FilePathPicker
+import org.roberthu.rs.platform.TextFileImporter
 import org.roberthu.rs.presentation.AppContainer
 import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.shell.RedisAppShell
@@ -25,6 +27,8 @@ fun App(modifier: Modifier = Modifier) {
 fun App(
     container: AppContainer,
     modifier: Modifier = Modifier,
+    textFileImporter: TextFileImporter = TextFileImporter { null },
+    sshPrivateKeyPathPicker: FilePathPicker = FilePathPicker { _ -> null },
 ) {
     val scope = rememberCoroutineScope()
     val viewModel = remember(container, scope) {
@@ -53,6 +57,10 @@ fun App(
                     connections = connectionsViewModel,
                     browser = keyBrowserViewModel,
                     detail = keyDetailViewModel,
+                    onImportText = { textFileImporter.importTextFile() },
+                    onPickSshPrivateKeyPath = {
+                        sshPrivateKeyPathPicker.pickFilePath(title = "选择 SSH 私钥")
+                    },
                 )
             },
         )

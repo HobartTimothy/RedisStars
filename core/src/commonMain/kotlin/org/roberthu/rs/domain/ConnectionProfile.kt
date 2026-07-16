@@ -54,6 +54,8 @@ data class ConnectionProfile(
     val timeouts: TimeoutOptions = TimeoutOptions(),
     val clientName: String? = null,
     val ssh: SshTunnelOptions = SshTunnelOptions(),
+    /** When null, the profile is shown under the implicit ungrouped section. */
+    val groupId: String? = null,
 ) {
     fun validate(): List<String> = buildList {
         if (name.isBlank()) {

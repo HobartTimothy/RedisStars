@@ -3,8 +3,10 @@ package org.roberthu.rs.port
 import kotlinx.coroutines.flow.StateFlow
 import org.roberthu.rs.domain.BinarySafeString
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.domain.CreateRedisKeyRequest
 import org.roberthu.rs.domain.HashScanPage
 import org.roberthu.rs.domain.KeyMetadata
+import org.roberthu.rs.domain.RedisDatabaseSummary
 import org.roberthu.rs.domain.RedisError
 import org.roberthu.rs.domain.ScanPage
 import org.roberthu.rs.domain.ScanQuery
@@ -29,6 +31,15 @@ sealed class ConnectionState {
 interface KeyBrowserPort {
     suspend fun scan(query: ScanQuery): Result<ScanPage>
     fun cancelScan()
+
+    /** Lists logical Redis databases with key counts. Cluster returns only db0. */
+    suspend fun listDatabases(): Result<List<RedisDatabaseSummary>>
+
+    /**
+     * Selects the active database for subsequent commands that do not pass an explicit DB.
+     * Cluster rejects any index other than 0.
+     */
+    suspend fun selectDatabase(index: Int): Result<Unit>
 }
 
 interface KeyCommandPort {
@@ -36,6 +47,10 @@ interface KeyCommandPort {
     suspend fun rename(from: String, to: String): Result<Unit>
     suspend fun delete(keys: List<String>): Result<Long>
     suspend fun setTtl(key: String, ttlSeconds: Long?): Result<Unit>
+
+    suspend fun exists(key: String, database: Int): Result<Boolean>
+    suspend fun createKey(request: CreateRedisKeyRequest): Result<Unit>
+    suspend fun isRedisJsonAvailable(): Result<Boolean>
 }
 
 interface RedisDataPort {

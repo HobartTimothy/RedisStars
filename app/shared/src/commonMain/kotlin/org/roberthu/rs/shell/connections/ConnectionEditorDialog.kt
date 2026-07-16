@@ -54,6 +54,7 @@ fun ConnectionEditorDialog(
     onTest: () -> Unit,
     onSave: () -> Unit,
     onParseUrl: (String) -> Unit,
+    onPickSshPrivateKeyPath: () -> String? = { null },
 ) {
     val clipboardManager = LocalClipboardManager.current
     val busy = state.testing || state.saving
@@ -134,6 +135,7 @@ fun ConnectionEditorDialog(
                                 form = state.form,
                                 fieldErrors = state.fieldErrors,
                                 onChange = { form -> onUpdateForm { form } },
+                                onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
                             )
                             ConnectionEditorSection.Advanced -> AdvancedConnectionSection(
                                 form = state.form,

@@ -61,6 +61,10 @@ class KeyDetailViewModel(
         }
     }
 
+    fun clear() {
+        mutableState.value = KeyDetailUiState()
+    }
+
     fun refresh() {
         mutableState.value.key?.let(::load)
     }
@@ -135,6 +139,7 @@ class KeyDetailViewModel(
                 data.zscan(metadata.key, null, PAGE_SIZE).getOrThrow().entries,
             )
             RedisKeyType.Stream -> KeyContent.Unsupported("Stream viewing is not available yet.")
+            RedisKeyType.Json -> KeyContent.Unsupported("JSON viewing is not available yet.")
             RedisKeyType.Other, RedisKeyType.Unknown ->
                 KeyContent.Unsupported("This Redis value type cannot be displayed.")
         }

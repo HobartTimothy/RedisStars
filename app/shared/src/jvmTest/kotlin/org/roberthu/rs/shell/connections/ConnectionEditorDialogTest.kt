@@ -6,11 +6,13 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.domain.DeploymentMode
+import org.roberthu.rs.domain.SshAuthMethod
 import org.roberthu.rs.presentation.ConnectionEditorMode
 import org.roberthu.rs.presentation.ConnectionEditorSection
 import org.roberthu.rs.presentation.ConnectionEditorUiState
@@ -25,29 +27,31 @@ import kotlin.test.assertNull
 @OptIn(ExperimentalTestApi::class)
 class ConnectionEditorDialogTest {
     @Test
-    fun add_opensDialogWithGeneralSection() = runComposeUiTest {
-        val state = mutableStateOf(ConnectionsUiState(profiles = emptyList()))
+    fun createEditor_showsDialogWithGeneralSection() = runComposeUiTest {
+        val form = ConnectionFormState.defaults()
         setContent {
             RedisTheme {
                 ConnectionsPane(
-                    state = state.value,
+                    state = ConnectionsUiState(
+                        editor = ConnectionEditorUiState(
+                            mode = ConnectionEditorMode.Create,
+                            profileId = "connection-1",
+                            selectedSection = ConnectionEditorSection.General,
+                            initialForm = form,
+                            form = form,
+                        ),
+                    ),
                     onSelect = {},
-                    onAdd = {
-                        val form = ConnectionFormState.defaults()
-                        state.value = state.value.copy(
-                            editor = ConnectionEditorUiState(
-                                mode = ConnectionEditorMode.Create,
-                                profileId = "connection-1",
-                                selectedSection = ConnectionEditorSection.General,
-                                initialForm = form,
-                                form = form,
-                            ),
-                        )
-                    },
+                    onBeginCreate = {},
+                    onOpenAddGroupDialog = {},
+                    onUpdateGroupName = {},
+                    onConfirmCreateGroup = {},
+                    onDismissGroupDialog = {},
+                    onToggleGroupExpanded = {},
                     onEdit = {},
                     onSelectEditorSection = {},
                     onUpdateEditorForm = {},
-                    onRequestCloseEditor = { state.value = state.value.copy(editor = null) },
+                    onRequestCloseEditor = {},
                     onConfirmDiscardEditor = {},
                     onDismissDiscardConfirmation = {},
                     onSaveEditor = {},
@@ -62,7 +66,6 @@ class ConnectionEditorDialogTest {
             }
         }
 
-        onNodeWithTag("connections_add").performClick()
         onNodeWithTag("connection_editor_dialog").assertIsDisplayed()
         onNodeWithTag("connection_editor_title").assertIsDisplayed()
         onNodeWithTag("connection_editor_name").assertIsDisplayed()
@@ -325,5 +328,46 @@ class ConnectionEditorDialogTest {
         assertEquals(2, editor.value.form.seedNodes.size)
         onNodeWithTag("connection_editor_seedNodes_1_delete").performClick()
         assertEquals(1, editor.value.form.seedNodes.size)
+    }
+
+    @Test
+    fun sshPrivateKeyPath_browseFillsPath() = runComposeUiTest {
+        val form = ConnectionFormState.defaults().copy(
+            sshEnabled = true,
+            sshAuthMethod = SshAuthMethod.PrivateKey,
+        )
+        val editor = mutableStateOf(
+            ConnectionEditorUiState(
+                mode = ConnectionEditorMode.Create,
+                profileId = "connection-1",
+                selectedSection = ConnectionEditorSection.General,
+                initialForm = form,
+                form = form,
+            ),
+        )
+        setContent {
+            RedisTheme {
+                ConnectionEditorDialog(
+                    state = editor.value,
+                    onSelectSection = {},
+                    onUpdateForm = { transform ->
+                        editor.value = editor.value.copy(form = transform(editor.value.form))
+                    },
+                    onRequestClose = {},
+                    onConfirmDiscard = {},
+                    onDismissDiscard = {},
+                    onTest = {},
+                    onSave = {},
+                    onParseUrl = {},
+                    onPickSshPrivateKeyPath = { "C:/Users/test/.ssh/id_rsa" },
+                )
+            }
+        }
+
+        onNodeWithTag("connection_editor_ssh_private_key_browse")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        assertEquals("C:/Users/test/.ssh/id_rsa", editor.value.form.sshPrivateKeyPath)
     }
 }

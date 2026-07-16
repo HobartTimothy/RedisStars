@@ -1,9 +1,12 @@
 package org.roberthu.rs
 
+import kotlinx.coroutines.sync.Mutex
+import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.port.ConnectionProfileStore
 import org.roberthu.rs.port.UserSettings
 import org.roberthu.rs.port.UserSettingsStore
+import org.roberthu.rs.presentation.StoredConnections
 import org.roberthu.rs.presentation.StoredDataCodec
 import java.nio.file.Files
 import java.nio.file.Path
@@ -11,7 +14,6 @@ import java.nio.file.StandardCopyOption
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
-import kotlinx.coroutines.sync.Mutex
 
 class DesktopJsonUserSettingsStore(
     private val file: Path,
@@ -31,32 +33,58 @@ class DesktopJsonUserSettingsStore(
 
 class DesktopJsonConnectionProfileStore(
     private val file: Path,
-    private val settingsStore: UserSettingsStore,
 ) : ConnectionProfileStore {
     private val lock = Mutex()
 
-    override suspend fun list(): List<ConnectionProfile> = locked { readProfiles() }
+    override suspend fun list(): List<ConnectionProfile> = locked { readConnections().profiles }
 
     override suspend fun upsert(profile: ConnectionProfile) {
         locked {
-            val profiles = readProfiles().associateByTo(linkedMapOf()) { it.id }
+            val data = readConnections()
+            val profiles = data.profiles.associateByTo(linkedMapOf()) { it.id }
             profiles[profile.id] = profile
-            writeProfiles(profiles.values.toList())
+            writeConnections(data.copy(profiles = profiles.values.toList()))
         }
     }
 
     override suspend fun delete(id: String) {
         locked {
-            writeProfiles(readProfiles().filterNot { it.id == id })
+            val data = readConnections()
+            writeConnections(data.copy(profiles = data.profiles.filterNot { it.id == id }))
         }
     }
 
-    private fun readProfiles(): List<ConnectionProfile> =
-        if (file.exists()) StoredDataCodec.decodeProfiles(file.readText()) else emptyList()
+    override suspend fun listGroups(): List<ConnectionGroup> = locked { readConnections().groups }
 
-    private suspend fun writeProfiles(profiles: List<ConnectionProfile>) {
-        val rememberPasswords = settingsStore.load().rememberPasswords
-        writeAtomically(file, StoredDataCodec.encodeProfiles(profiles, rememberPasswords))
+    override suspend fun upsertGroup(group: ConnectionGroup) {
+        locked {
+            val data = readConnections()
+            val groups = data.groups.associateByTo(linkedMapOf()) { it.id }
+            groups[group.id] = group
+            writeConnections(data.copy(groups = groups.values.toList()))
+        }
+    }
+
+    override suspend fun deleteGroup(id: String) {
+        locked {
+            val data = readConnections()
+            writeConnections(
+                data.copy(
+                    groups = data.groups.filterNot { it.id == id },
+                    profiles = data.profiles.map {
+                        if (it.groupId == id) it.copy(groupId = null) else it
+                    },
+                ),
+            )
+        }
+    }
+
+    private fun readConnections(): StoredConnections =
+        if (file.exists()) StoredDataCodec.decodeConnections(file.readText()) else StoredConnections()
+
+    private fun writeConnections(data: StoredConnections) {
+        // Always persist Redis/SSH secrets with connection profiles.
+        writeAtomically(file, StoredDataCodec.encodeConnections(data, rememberPasswords = true))
     }
 
     private suspend fun <T> locked(block: suspend () -> T): T {

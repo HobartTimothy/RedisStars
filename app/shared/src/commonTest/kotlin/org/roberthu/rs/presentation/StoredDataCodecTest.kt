@@ -1,5 +1,6 @@
 package org.roberthu.rs.presentation
 
+import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.domain.DeploymentMode
 import org.roberthu.rs.domain.SshAuthMethod
@@ -65,5 +66,33 @@ class StoredDataCodecTest {
         )
 
         assertEquals("ssh-secret", decoded.single().ssh.password)
+    }
+
+    @Test
+    fun legacyArrayStillDecodesProfiles() {
+        val legacy = """[{"id":"c1","name":"Legacy","mode":"Standalone","host":"localhost","port":6379,"database":0}]"""
+        val decoded = StoredDataCodec.decodeConnections(legacy)
+        assertEquals(1, decoded.profiles.size)
+        assertEquals("c1", decoded.profiles.single().id)
+        assertTrue(decoded.groups.isEmpty())
+    }
+
+    @Test
+    fun newDocumentWithGroupsRoundTrips() {
+        val group = ConnectionGroup(id = "g1", name = "Dev", order = 0, expanded = true)
+        val profile = ConnectionProfile(
+            id = "c1",
+            name = "Local",
+            mode = DeploymentMode.Standalone,
+            host = "127.0.0.1",
+            groupId = "g1",
+        )
+        val encoded = StoredDataCodec.encodeConnections(
+            StoredConnections(groups = listOf(group), profiles = listOf(profile)),
+            rememberPasswords = false,
+        )
+        val decoded = StoredDataCodec.decodeConnections(encoded)
+        assertEquals(listOf("g1"), decoded.groups.map { it.id })
+        assertEquals("g1", decoded.profiles.single().groupId)
     }
 }

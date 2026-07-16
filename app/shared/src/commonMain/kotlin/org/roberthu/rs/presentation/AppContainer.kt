@@ -28,8 +28,11 @@ class AppContainer(
             ConnectionsViewModel(connectionProfileStore, it, scope)
         }
 
-    fun createKeyBrowserViewModel(scope: CoroutineScope): KeyBrowserViewModel? =
-        keyBrowserPort?.let { KeyBrowserViewModel(it, scope) }
+    fun createKeyBrowserViewModel(scope: CoroutineScope): KeyBrowserViewModel? {
+        val browser = keyBrowserPort ?: return null
+        val commands = keyCommandPort ?: return null
+        return KeyBrowserViewModel(browser, commands, scope)
+    }
 
     fun createKeyDetailViewModel(scope: CoroutineScope): KeyDetailViewModel? {
         val commands = keyCommandPort ?: return null
@@ -59,8 +62,10 @@ class InMemoryUserSettingsStore(
 
 class InMemoryConnectionProfileStore(
     initialProfiles: List<ConnectionProfile> = emptyList(),
+    initialGroups: List<org.roberthu.rs.domain.ConnectionGroup> = emptyList(),
 ) : ConnectionProfileStore {
     private val profiles = initialProfiles.associateByTo(mutableMapOf()) { it.id }
+    private val groups = initialGroups.associateByTo(mutableMapOf()) { it.id }
 
     override suspend fun list(): List<ConnectionProfile> = profiles.values.toList()
 
@@ -70,5 +75,19 @@ class InMemoryConnectionProfileStore(
 
     override suspend fun delete(id: String) {
         profiles.remove(id)
+    }
+
+    override suspend fun listGroups(): List<org.roberthu.rs.domain.ConnectionGroup> =
+        groups.values.toList()
+
+    override suspend fun upsertGroup(group: org.roberthu.rs.domain.ConnectionGroup) {
+        groups[group.id] = group
+    }
+
+    override suspend fun deleteGroup(id: String) {
+        groups.remove(id)
+        profiles.replaceAll { _, profile ->
+            if (profile.groupId == id) profile.copy(groupId = null) else profile
+        }
     }
 }

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.domain.DeploymentMode
 import org.roberthu.rs.domain.HostPort
@@ -231,6 +232,42 @@ class ConnectionsViewModelTest {
     }
 
     @Test
+    fun saveEditor_keepsPasswordInUiWhenStoreStripsSecrets() = vmTest(
+        store = FakeConnectionProfileStore(stripSecretsOnUpsert = true),
+    ) { viewModel, store, _ ->
+        viewModel.beginCreate()
+        advanceUntilIdle()
+        viewModel.updateEditorForm {
+            it.copy(name = "Cloud", host = "redis.example", password = "s3cret")
+        }
+
+        viewModel.saveEditor()
+        advanceUntilIdle()
+
+        val listed = viewModel.state.value.profiles.single()
+        assertEquals("s3cret", listed.password)
+        assertNull(store.profiles.single().password)
+    }
+
+    @Test
+    fun saveEditor_editBlankPasswordKeepsExisting() = vmTest(
+        store = FakeConnectionProfileStore(
+            mutableListOf(standaloneProfile("c1", "Existing").copy(password = "kept")),
+        ),
+    ) { viewModel, store, _ ->
+        val profile = store.profiles.single()
+        viewModel.edit(profile)
+        advanceUntilIdle()
+        viewModel.updateEditorForm { it.copy(name = "Renamed", password = "") }
+
+        viewModel.saveEditor()
+        advanceUntilIdle()
+
+        assertEquals("kept", viewModel.state.value.profiles.single().password)
+        assertEquals("kept", store.profiles.single().password)
+    }
+
+    @Test
     fun confirmDiscardEditor_closesDialog() = vmTest { viewModel, _, _ ->
         viewModel.beginCreate()
         advanceUntilIdle()
@@ -241,6 +278,35 @@ class ConnectionsViewModelTest {
         advanceUntilIdle()
 
         assertNull(viewModel.state.value.editor)
+    }
+
+    @Test
+    fun confirmCreateGroup_addsGroupAndSelectsIt() = vmTest { viewModel, store, _ ->
+        viewModel.openAddGroupDialog()
+        viewModel.updateGroupName("Production")
+        viewModel.confirmCreateGroup()
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.groupDialog)
+        assertEquals(1, viewModel.state.value.groups.size)
+        assertEquals("Production", viewModel.state.value.groups.single().name)
+        assertEquals(viewModel.state.value.groups.single().id, viewModel.state.value.selectedGroupId)
+        assertEquals(1, store.groups.size)
+    }
+
+    @Test
+    fun beginCreate_withGroupId_setsPendingGroupId() = vmTest(
+        store = FakeConnectionProfileStore(
+            groups = mutableListOf(ConnectionGroup(id = "g1", name = "Dev")),
+        ),
+    ) { viewModel, _, _ ->
+        viewModel.selectGroup("g1")
+        viewModel.beginCreate("g1")
+        advanceUntilIdle()
+
+        val editor = assertNotNull(viewModel.state.value.editor)
+        assertEquals("g1", editor.pendingGroupId)
+        assertEquals("g1", editor.form.groupId)
     }
 }
 
@@ -275,7 +341,9 @@ private fun vmTest(
 
 private class FakeConnectionProfileStore(
     val profiles: MutableList<ConnectionProfile> = mutableListOf(),
+    val groups: MutableList<ConnectionGroup> = mutableListOf(),
     private val failUpsert: Boolean = false,
+    private val stripSecretsOnUpsert: Boolean = false,
 ) : ConnectionProfileStore {
     var upsertCount: Int = 0
         private set
@@ -285,16 +353,48 @@ private class FakeConnectionProfileStore(
     override suspend fun upsert(profile: ConnectionProfile) {
         upsertCount++
         if (failUpsert) throw RedisError.Unknown("store write failed")
-        val index = profiles.indexOfFirst { it.id == profile.id }
-        if (index >= 0) {
-            profiles[index] = profile
+        val toStore = if (stripSecretsOnUpsert) {
+            profile.copy(
+                password = null,
+                ssh = profile.ssh.copy(
+                    password = null,
+                    privateKey = null,
+                    privateKeyPassphrase = null,
+                ),
+            )
         } else {
-            profiles += profile
+            profile
+        }
+        val index = profiles.indexOfFirst { it.id == toStore.id }
+        if (index >= 0) {
+            profiles[index] = toStore
+        } else {
+            profiles += toStore
         }
     }
 
     override suspend fun delete(id: String) {
         profiles.removeAll { it.id == id }
+    }
+
+    override suspend fun listGroups(): List<ConnectionGroup> = groups.toList()
+
+    override suspend fun upsertGroup(group: ConnectionGroup) {
+        val index = groups.indexOfFirst { it.id == group.id }
+        if (index >= 0) {
+            groups[index] = group
+        } else {
+            groups += group
+        }
+    }
+
+    override suspend fun deleteGroup(id: String) {
+        groups.removeAll { it.id == id }
+        for (i in profiles.indices) {
+            if (profiles[i].groupId == id) {
+                profiles[i] = profiles[i].copy(groupId = null)
+            }
+        }
     }
 }
 

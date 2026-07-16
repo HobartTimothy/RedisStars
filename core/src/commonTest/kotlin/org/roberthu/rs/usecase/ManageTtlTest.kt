@@ -34,5 +34,12 @@ class ManageTtlTest {
             ttlCalls += key to ttlSeconds
             return Result.success(Unit)
         }
+
+        override suspend fun exists(key: String, database: Int) = Result.success(false)
+
+        override suspend fun createKey(request: org.roberthu.rs.domain.CreateRedisKeyRequest) =
+            Result.success(Unit)
+
+        override suspend fun isRedisJsonAvailable() = Result.success(false)
     }
 }

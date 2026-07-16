@@ -5,12 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -38,6 +40,7 @@ fun GeneralConnectionSection(
     form: ConnectionFormState,
     fieldErrors: Map<String, String>,
     onChange: (ConnectionFormState) -> Unit,
+    onPickSshPrivateKeyPath: () -> String? = { null },
     modifier: Modifier = Modifier,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
@@ -72,7 +75,7 @@ fun GeneralConnectionSection(
                         onChange(
                             form.copy(
                                 deploymentMode = mode,
-                                database = if (mode == DeploymentMode.Cluster) "0" else form.database,
+                                database = "0",
                             ),
                         )
                     },
@@ -110,32 +113,10 @@ fun GeneralConnectionSection(
         }
 
         OutlinedTextField(
-            value = form.database,
-            onValueChange = { value ->
-                if (form.deploymentMode != DeploymentMode.Cluster) {
-                    onChange(form.copy(database = value))
-                }
-            },
-            label = { Text("Database") },
-            singleLine = true,
-            enabled = form.deploymentMode != DeploymentMode.Cluster,
-            isError = fieldErrors.containsKey("database"),
-            supportingText = {
-                when {
-                    form.deploymentMode == DeploymentMode.Cluster ->
-                        Text("Cluster 模式数据库固定为 0")
-                    fieldErrors["database"] != null -> Text(fieldErrors.getValue("database"))
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("connection_editor_database"),
-        )
-
-        OutlinedTextField(
             value = form.username,
             onValueChange = { onChange(form.copy(username = it)) },
-            label = { Text("Username") },
+            label = { Text("用户名（可选）") },
+            placeholder = { Text("可留空") },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -145,7 +126,8 @@ fun GeneralConnectionSection(
         OutlinedTextField(
             value = form.password,
             onValueChange = { onChange(form.copy(password = it)) },
-            label = { Text("Password") },
+            label = { Text("密码") },
+            placeholder = { Text("保存后会记住") },
             singleLine = true,
             visualTransformation = if (passwordVisible) {
                 VisualTransformation.None
@@ -190,6 +172,7 @@ fun GeneralConnectionSection(
                     form = form,
                     fieldErrors = fieldErrors,
                     onChange = onChange,
+                    onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
                 )
             }
         }
@@ -201,6 +184,7 @@ private fun SshTunnelSection(
     form: ConnectionFormState,
     fieldErrors: Map<String, String>,
     onChange: (ConnectionFormState) -> Unit,
+    onPickSshPrivateKeyPath: () -> String?,
 ) {
     var sshPasswordVisible by remember { mutableStateOf(false) }
     var passphraseVisible by remember { mutableStateOf(false) }
@@ -297,15 +281,36 @@ private fun SshTunnelSection(
                     .testTag("connection_editor_ssh_password"),
             )
         } else {
-            OutlinedTextField(
-                value = form.sshPrivateKeyPath,
-                onValueChange = { onChange(form.copy(sshPrivateKeyPath = it)) },
-                label = { Text("Private Key Path") },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("connection_editor_ssh_private_key_path"),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = form.sshPrivateKeyPath,
+                    onValueChange = { onChange(form.copy(sshPrivateKeyPath = it)) },
+                    label = { Text("Private Key Path") },
+                    singleLine = true,
+                    readOnly = true,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("connection_editor_ssh_private_key_path"),
+                )
+                OutlinedButton(
+                    onClick = {
+                        onPickSshPrivateKeyPath()?.let { path ->
+                            onChange(form.copy(sshPrivateKeyPath = path))
+                        }
+                    },
+                    modifier = Modifier.testTag("connection_editor_ssh_private_key_browse"),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Folder,
+                        contentDescription = "选择私钥文件",
+                    )
+                    Text(" 选择…")
+                }
+            }
             OutlinedTextField(
                 value = form.sshPrivateKey,
                 onValueChange = { onChange(form.copy(sshPrivateKey = it)) },

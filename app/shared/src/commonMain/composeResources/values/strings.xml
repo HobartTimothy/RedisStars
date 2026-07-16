@@ -6,4 +6,67 @@
     <string name="settings_title">软件设置</string>
     <string name="settings_dark_mode">深色模式</string>
     <string name="settings_auto_connect">启动时自动连接</string>
+
+    <!-- Connections -->
+    <string name="connections_title">连接</string>
+    <string name="connections_add_group">添加组</string>
+    <string name="connections_add_connection">添加连接</string>
+    <string name="connections_ungrouped">未分组</string>
+    <string name="connections_group_dialog_title">新建连接组</string>
+    <string name="connections_group_name_label">组名称</string>
+    <string name="connections_group_confirm">确定</string>
+    <string name="connections_group_cancel">取消</string>
+    <string name="connections_context_add_group">添加组</string>
+    <string name="connections_context_add_connection">添加连接</string>
+    <string name="connections_empty">添加 Redis 连接以开始浏览键。</string>
+    <string name="connections_connect">连接</string>
+    <string name="connections_test">测试</string>
+    <string name="connections_edit">编辑</string>
+    <string name="connections_delete">删除</string>
+    <string name="connections_delete_title">删除连接？</string>
+    <string name="connections_delete_message">删除「%1$s」？此操作无法撤销。</string>
+
+    <!-- Keys -->
+    <string name="keys_title">键</string>
+    <string name="keys_add">添加键</string>
+    <string name="keys_refresh">刷新</string>
+    <string name="keys_pattern_placeholder">users:*</string>
+    <string name="keys_pattern_label">匹配模式</string>
+    <string name="keys_empty">没有匹配此模式的键。</string>
+    <string name="keys_not_connected">连接 Redis 后可浏览键。</string>
+    <string name="keys_load_more">加载更多</string>
+    <string name="keys_cancel_scan">取消</string>
+    <string name="keys_scan_error_hint">选择刷新重试。</string>
+    <string name="keys_cluster_partial">%1$d 个集群节点扫描失败，结果可能不完整。</string>
+    <string name="keys_database">数据库</string>
+    <string name="keys_database_format">db%1$d (%2$d)</string>
+    <string name="keys_cluster_db_tooltip">Cluster 模式仅支持 db0</string>
+    <string name="keys_ttl_permanent">永久</string>
+    <string name="keys_clear_pattern">清除</string>
+
+    <!-- Add key dialog -->
+    <string name="add_key_title">添加键</string>
+    <string name="add_key_name_label">键名</string>
+    <string name="add_key_database_label">数据库</string>
+    <string name="add_key_type_label">类型</string>
+    <string name="add_key_ttl_label">TTL（秒）</string>
+    <string name="add_key_permanent">永久</string>
+    <string name="add_key_string_value">值</string>
+    <string name="add_key_hash_field">字段</string>
+    <string name="add_key_hash_value">值</string>
+    <string name="add_key_list_element">元素</string>
+    <string name="add_key_set_member">成员</string>
+    <string name="add_key_zset_score">分数</string>
+    <string name="add_key_zset_member">成员</string>
+    <string name="add_key_stream_field">字段</string>
+    <string name="add_key_stream_value">值</string>
+    <string name="add_key_json_content">JSON 内容</string>
+    <string name="add_key_import">导入数据</string>
+    <string name="add_key_import_tooltip">即将支持</string>
+    <string name="add_key_confirm">创建</string>
+    <string name="add_key_cancel">取消</string>
+    <string name="add_key_add_row">添加行</string>
+    <string name="add_key_remove_row">删除</string>
+    <string name="add_key_error_key_required">键名不能为空</string>
+    <string name="add_key_error_json_unavailable">当前 Redis 实例未安装 RedisJSON 模块</string>
 </resources>

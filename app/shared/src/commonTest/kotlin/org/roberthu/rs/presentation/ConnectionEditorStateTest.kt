@@ -66,7 +66,7 @@ class ConnectionEditorStateTest {
         assertEquals(DeploymentMode.Standalone, profile.mode)
         assertEquals("redis.example", profile.host)
         assertEquals(6379, profile.port)
-        assertEquals(1, profile.database)
+        assertEquals(0, profile.database)
         assertEquals("u", profile.username)
         assertEquals("p", profile.password)
     }
@@ -88,7 +88,7 @@ class ConnectionEditorStateTest {
 
         assertEquals(DeploymentMode.Sentinel, profile.mode)
         assertEquals("mymaster", profile.masterName)
-        assertEquals(3, profile.database)
+        assertEquals(0, profile.database)
         assertEquals(
             listOf(HostPort("s1.example", 26379), HostPort("s2.example", 26380)),
             profile.sentinelNodes,
@@ -144,13 +144,14 @@ class ConnectionEditorStateTest {
     }
 
     @Test
-    fun toConnectionProfile_invalidDatabase_reportsFieldError() {
-        val form = ConnectionFormState.defaults().copy(database = "x")
+    fun toConnectionProfile_ignoresFormDatabase_alwaysUsesZero() {
+        val form = ConnectionFormState.defaults().copy(
+            name = "Local",
+            database = "x",
+        )
 
-        val result = form.toConnectionProfile("id")
-
-        assertTrue(result.isFailure)
-        assertEquals("Database must be a number", result.fieldErrors["database"])
+        val profile = form.toConnectionProfile("id").getOrThrow()
+        assertEquals(0, profile.database)
     }
 
     @Test

@@ -127,8 +127,8 @@ class LettuceClientFactory {
         profile: ConnectionProfile,
         database: Int,
     ): RedisURI.Builder {
-        val username = profile.username
-        val password = profile.password
+        val username = profile.username?.takeIf { it.isNotBlank() }
+        val password = profile.password?.takeIf { it.isNotEmpty() }
         builder
             .withDatabase(database)
             .withSsl(profile.tls.enabled)

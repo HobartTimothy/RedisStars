@@ -12,11 +12,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import org.roberthu.rs.domain.DeploymentMode
 import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.presentation.ConnectionsViewModel
 import org.roberthu.rs.presentation.KeyBrowserViewModel
 import org.roberthu.rs.presentation.KeyDetailViewModel
 import org.roberthu.rs.shell.detail.KeyDetailScreen
+import org.roberthu.rs.shell.keys.AddKeyDialog
 import org.roberthu.rs.shell.keys.KeyBrowserScreen
 
 @Composable
@@ -25,6 +27,8 @@ fun ConnectionsWorkspace(
     browser: KeyBrowserViewModel?,
     detail: KeyDetailViewModel?,
     modifier: Modifier = Modifier,
+    onImportText: () -> String? = { null },
+    onPickSshPrivateKeyPath: () -> String? = { null },
 ) {
     if (connections == null || browser == null || detail == null) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -41,15 +45,45 @@ fun ConnectionsWorkspace(
     val detailState by detail.state.collectAsState()
     val connected = connectionsState.connectionState is ConnectionState.Connected
 
+    LaunchedEffect(connectionsState.connectionState) {
+        when (val state = connectionsState.connectionState) {
+            is ConnectionState.Connected -> {
+                val profile = connectionsState.profiles.firstOrNull { it.id == state.profileId }
+                val clusterMode = profile?.mode == DeploymentMode.Cluster
+                browser.onConnected(clusterMode, initialDatabase = 0)
+            }
+            ConnectionState.Disconnected -> browser.onDisconnected()
+            else -> Unit
+        }
+    }
+
     LaunchedEffect(detailState.deletedKey) {
         if (detailState.deletedKey != null) browser.refresh()
+    }
+
+    LaunchedEffect(browserState.selectedKey) {
+        if (browserState.selectedKey == null) {
+            detail.clear()
+        }
+    }
+
+    LaunchedEffect(browserState.lastCreatedKey) {
+        browserState.lastCreatedKey?.let { key ->
+            detail.load(key)
+        }
     }
 
     Row(modifier = modifier.fillMaxSize()) {
         ConnectionsPane(
             state = connectionsState,
             onSelect = connections::select,
-            onAdd = connections::beginCreate,
+            onBeginCreate = connections::beginCreate,
+            onOpenAddGroupDialog = connections::openAddGroupDialog,
+            onUpdateGroupName = connections::updateGroupName,
+            onConfirmCreateGroup = connections::confirmCreateGroup,
+            onDismissGroupDialog = connections::dismissGroupDialog,
+            onToggleGroupExpanded = connections::toggleGroupExpanded,
+            onSelectGroup = connections::selectGroup,
             onEdit = connections::edit,
             onSelectEditorSection = connections::selectEditorSection,
             onUpdateEditorForm = connections::updateEditorForm,
@@ -64,6 +98,8 @@ fun ConnectionsWorkspace(
             onDelete = connections::requestDelete,
             onConfirmDelete = connections::confirmDelete,
             onDismissDelete = connections::dismissDelete,
+            onDismissError = connections::dismissError,
+            onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer),
         )
         KeyBrowserScreen(
@@ -77,6 +113,8 @@ fun ConnectionsWorkspace(
                 browser.select(key)
                 detail.load(key)
             },
+            onOpenAddKey = browser::openAddKeyDialog,
+            onSelectDatabase = browser::selectDatabase,
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
         )
         KeyDetailScreen(
@@ -89,6 +127,31 @@ fun ConnectionsWorkspace(
             onConfirmDelete = detail::confirmDelete,
             onDismissDelete = detail::dismissDelete,
             modifier = Modifier.weight(1f),
+        )
+    }
+
+    browserState.addKeyDialog?.let { dialog ->
+        AddKeyDialog(
+            state = dialog,
+            databases = browserState.databases,
+            clusterMode = browserState.clusterMode,
+            onDismiss = browser::closeAddKeyDialog,
+            onKeyChange = browser::updateAddKeyKey,
+            onDatabaseChange = browser::updateAddKeyDatabase,
+            onTypeChange = browser::changeAddKeyType,
+            onTtlTextChange = browser::updateAddKeyTtlText,
+            onPermanentChange = browser::updateAddKeyPermanent,
+            onStringValueChange = browser::updateAddKeyStringValue,
+            onHashFieldsChange = browser::updateAddKeyHashFields,
+            onListValuesChange = browser::updateAddKeyListValues,
+            onSetMembersChange = browser::updateAddKeySetMembers,
+            onZsetEntriesChange = browser::updateAddKeyZsetEntries,
+            onStreamFieldsChange = browser::updateAddKeyStreamFields,
+            onJsonContentChange = browser::updateAddKeyJsonContent,
+            onImportClick = {
+                onImportText()?.let(browser::applyImportedText)
+            },
+            onSubmit = browser::submitNewKey,
         )
     }
 }

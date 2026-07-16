@@ -6,15 +6,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.port.ConnectionProfileStore
 import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.port.RedisConnectionPort
 import org.roberthu.rs.usecase.ManageConnections
 
+data class GroupDialogState(
+    val name: String = "",
+    val error: String? = null,
+)
+
 data class ConnectionsUiState(
     val profiles: List<ConnectionProfile> = emptyList(),
+    val groups: List<ConnectionGroup> = emptyList(),
     val selectedProfileId: String? = null,
+    val selectedGroupId: String? = null,
+    val groupDialog: GroupDialogState? = null,
     val editor: ConnectionEditorUiState? = null,
     val connectionState: ConnectionState = ConnectionState.Disconnected,
     val busy: Boolean = false,
@@ -42,13 +51,18 @@ class ConnectionsViewModel(
 
     fun reload() {
         scope.launch {
-            runCatching { manage.list() }
-                .onSuccess { profiles ->
+            runCatching {
+                manage.list() to manage.listGroups()
+            }
+                .onSuccess { (profiles, groups) ->
                     mutableState.update {
                         it.copy(
                             profiles = profiles.sortedBy(ConnectionProfile::name),
+                            groups = groups,
                             selectedProfileId = it.selectedProfileId
                                 ?.takeIf { id -> profiles.any { profile -> profile.id == id } },
+                            selectedGroupId = it.selectedGroupId
+                                ?.takeIf { id -> groups.any { group -> group.id == id } },
                             error = null,
                         )
                     }
@@ -63,11 +77,15 @@ class ConnectionsViewModel(
         }
     }
 
-    fun beginCreate() {
+    fun selectGroup(id: String?) {
+        mutableState.update { it.copy(selectedGroupId = id) }
+    }
+
+    fun beginCreate(groupId: String? = mutableState.value.selectedGroupId) {
         val ids = mutableState.value.profiles.mapTo(mutableSetOf()) { it.id }
         var suffix = mutableState.value.profiles.size + 1
         while ("connection-$suffix" in ids) suffix++
-        val form = ConnectionFormState.defaults()
+        val form = ConnectionFormState.defaults().copy(groupId = groupId)
         mutableState.update {
             it.copy(
                 editor = ConnectionEditorUiState(
@@ -76,9 +94,89 @@ class ConnectionsViewModel(
                     selectedSection = ConnectionEditorSection.General,
                     initialForm = form,
                     form = form,
+                    pendingGroupId = groupId,
                 ),
                 error = null,
             )
+        }
+    }
+
+    fun openAddGroupDialog() {
+        mutableState.update {
+            it.copy(groupDialog = GroupDialogState())
+        }
+    }
+
+    fun updateGroupName(name: String) {
+        mutableState.update { state ->
+            state.copy(
+                groupDialog = state.groupDialog?.copy(name = name, error = null),
+            )
+        }
+    }
+
+    fun confirmCreateGroup() {
+        val dialog = mutableState.value.groupDialog ?: return
+        val existingNames = mutableState.value.groups.map { it.name.trim() }
+        val trimmed = dialog.name.trim()
+        val validationErrors = ConnectionGroup(
+            id = "pending",
+            name = trimmed,
+        ).validate(existingNames)
+        if (validationErrors.isNotEmpty()) {
+            mutableState.update {
+                it.copy(groupDialog = dialog.copy(error = validationErrors.first()))
+            }
+            return
+        }
+
+        val ids = mutableState.value.groups.mapTo(mutableSetOf()) { it.id }
+        var suffix = mutableState.value.groups.size + 1
+        while ("group-$suffix" in ids) suffix++
+        val group = ConnectionGroup(
+            id = "group-$suffix",
+            name = trimmed,
+            order = mutableState.value.groups.size,
+        )
+        scope.launch {
+            runCatching { manage.createGroup(group).getOrThrow() }
+                .onSuccess {
+                    mutableState.update { state ->
+                        state.copy(
+                            groups = state.groups + group,
+                            selectedGroupId = group.id,
+                            groupDialog = null,
+                            error = null,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    mutableState.update {
+                        it.copy(groupDialog = dialog.copy(error = error.message))
+                    }
+                }
+        }
+    }
+
+    fun dismissGroupDialog() {
+        mutableState.update { it.copy(groupDialog = null) }
+    }
+
+    fun toggleGroupExpanded(groupId: String) {
+        val group = mutableState.value.groups.firstOrNull { it.id == groupId } ?: return
+        val expanded = !group.expanded
+        scope.launch {
+            runCatching { manage.setGroupExpanded(groupId, expanded).getOrThrow() }
+                .onSuccess {
+                    mutableState.update { state ->
+                        state.copy(
+                            groups = state.groups.map { g ->
+                                if (g.id == groupId) g.copy(expanded = expanded) else g
+                            },
+                        )
+                    }
+                }
+                .onFailure(::showListError)
         }
     }
 
@@ -154,6 +252,15 @@ class ConnectionsViewModel(
             }
 
             is ConnectionFormConversionResult.Success -> {
+                val existing = mutableState.value.profiles.firstOrNull { it.id == editor.profileId }
+                val converted = when (editor.mode) {
+                    ConnectionEditorMode.Create ->
+                        conversion.profile.copy(groupId = editor.pendingGroupId ?: editor.form.groupId)
+                    ConnectionEditorMode.Edit -> conversion.profile
+                }
+                // Blank password/SSH secrets on edit keep the previously loaded values so a
+                // save after "test with typed password" never silently drops auth.
+                val profileToSave = preserveBlankSecrets(converted, existing)
                 updateEditor {
                     it.copy(
                         saving = true,
@@ -164,13 +271,22 @@ class ConnectionsViewModel(
                 }
                 scope.launch {
                     runCatching {
-                        manage.update(conversion.profile).getOrThrow()
-                        manage.list().sortedBy(ConnectionProfile::name)
-                    }.onSuccess { profiles ->
+                        manage.update(profileToSave).getOrThrow()
+                        manage.list() to manage.listGroups()
+                    }.onSuccess { (profiles, groups) ->
                         mutableState.update {
                             it.copy(
-                                profiles = profiles,
-                                selectedProfileId = conversion.profile.id,
+                                profiles = profiles
+                                    .map { loaded ->
+                                        if (loaded.id == profileToSave.id) {
+                                            restoreSecrets(loaded, profileToSave)
+                                        } else {
+                                            loaded
+                                        }
+                                    }
+                                    .sortedBy(ConnectionProfile::name),
+                                groups = groups,
+                                selectedProfileId = profileToSave.id,
                                 editor = null,
                                 busy = false,
                                 error = null,
@@ -321,6 +437,35 @@ class ConnectionsViewModel(
             it.copy(error = error.message ?: "Connection operation failed", busy = false)
         }
     }
+
+    private fun preserveBlankSecrets(
+        profile: ConnectionProfile,
+        existing: ConnectionProfile?,
+    ): ConnectionProfile {
+        if (existing == null) return profile
+        return profile.copy(
+            password = profile.password ?: existing.password,
+            ssh = profile.ssh.copy(
+                password = profile.ssh.password ?: existing.ssh.password,
+                privateKey = profile.ssh.privateKey ?: existing.ssh.privateKey,
+                privateKeyPassphrase = profile.ssh.privateKeyPassphrase
+                    ?: existing.ssh.privateKeyPassphrase,
+            ),
+        )
+    }
+
+    private fun restoreSecrets(
+        loaded: ConnectionProfile,
+        saved: ConnectionProfile,
+    ): ConnectionProfile = loaded.copy(
+        password = loaded.password ?: saved.password,
+        ssh = loaded.ssh.copy(
+            password = loaded.ssh.password ?: saved.ssh.password,
+            privateKey = loaded.ssh.privateKey ?: saved.ssh.privateKey,
+            privateKeyPassphrase = loaded.ssh.privateKeyPassphrase
+                ?: saved.ssh.privateKeyPassphrase,
+        ),
+    )
 
     private fun changedFieldKeys(
         previous: ConnectionFormState,

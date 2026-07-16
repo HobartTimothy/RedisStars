@@ -60,5 +60,10 @@ class BrowseKeysTest {
         override fun cancelScan() {
             cancelCalls += 1
         }
+
+        override suspend fun listDatabases() =
+            Result.success(listOf(org.roberthu.rs.domain.RedisDatabaseSummary(0, 0)))
+
+        override suspend fun selectDatabase(index: Int) = Result.success(Unit)
     }
 }

@@ -4,6 +4,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.domain.DeploymentMode
 import org.roberthu.rs.domain.HostPort
@@ -12,6 +16,11 @@ import org.roberthu.rs.domain.SshTunnelOptions
 import org.roberthu.rs.domain.TimeoutOptions
 import org.roberthu.rs.domain.TlsOptions
 import org.roberthu.rs.port.UserSettings
+
+data class StoredConnections(
+    val groups: List<ConnectionGroup> = emptyList(),
+    val profiles: List<ConnectionProfile> = emptyList(),
+)
 
 object StoredDataCodec {
     private val json = Json {
@@ -26,10 +35,62 @@ object StoredDataCodec {
         json.decodeFromString<StoredSettings>(value).toDomain()
 
     fun encodeProfiles(profiles: List<ConnectionProfile>, rememberPasswords: Boolean): String =
-        json.encodeToString(profiles.map { StoredProfile.from(it, rememberPasswords) })
+        encodeConnections(StoredConnections(profiles = profiles), rememberPasswords)
 
     fun decodeProfiles(value: String): List<ConnectionProfile> =
-        json.decodeFromString<List<StoredProfile>>(value).map(StoredProfile::toDomain)
+        decodeConnections(value).profiles
+
+    fun encodeConnections(data: StoredConnections, rememberPasswords: Boolean): String =
+        json.encodeToString(
+            StoredConnectionsDocument(
+                schemaVersion = 1,
+                groups = data.groups.map(StoredGroup::from),
+                profiles = data.profiles.map { StoredProfile.from(it, rememberPasswords) },
+            ),
+        )
+
+    fun decodeConnections(value: String): StoredConnections {
+        val element = json.parseToJsonElement(value)
+        return when (element) {
+            is JsonArray -> StoredConnections(
+                profiles = json.decodeFromJsonElement<List<StoredProfile>>(element).map(StoredProfile::toDomain),
+            )
+            is JsonObject -> {
+                val document = json.decodeFromJsonElement<StoredConnectionsDocument>(element)
+                StoredConnections(
+                    groups = document.groups.map(StoredGroup::toDomain),
+                    profiles = document.profiles.map(StoredProfile::toDomain),
+                )
+            }
+            else -> StoredConnections()
+        }
+    }
+}
+
+@Serializable
+private data class StoredConnectionsDocument(
+    val schemaVersion: Int = 1,
+    val groups: List<StoredGroup> = emptyList(),
+    val profiles: List<StoredProfile> = emptyList(),
+)
+
+@Serializable
+private data class StoredGroup(
+    val id: String,
+    val name: String,
+    val order: Int = 0,
+    val expanded: Boolean = true,
+) {
+    fun toDomain() = ConnectionGroup(id = id, name = name, order = order, expanded = expanded)
+
+    companion object {
+        fun from(group: ConnectionGroup) = StoredGroup(
+            id = group.id,
+            name = group.name,
+            order = group.order,
+            expanded = group.expanded,
+        )
+    }
 }
 
 @Serializable
@@ -37,7 +98,7 @@ private data class StoredSettings(
     val darkMode: Boolean = true,
     val autoConnect: Boolean = false,
     val recentConnectionId: String? = null,
-    val rememberPasswords: Boolean = false,
+    val rememberPasswords: Boolean = true,
     val remoteBaseUrl: String = "http://127.0.0.1:8080",
 ) {
     fun toDomain() = UserSettings(
@@ -106,6 +167,7 @@ private data class StoredProfile(
     val timeouts: StoredTimeoutOptions = StoredTimeoutOptions(),
     val clientName: String? = null,
     val ssh: StoredSshOptions = StoredSshOptions(),
+    val groupId: String? = null,
 ) {
     fun toDomain() = ConnectionProfile(
         id = id,
@@ -135,6 +197,7 @@ private data class StoredProfile(
             privateKeyPassphrase = ssh.privateKeyPassphrase,
             connectTimeoutMs = ssh.connectTimeoutMs,
         ),
+        groupId = groupId,
     )
 
     companion object {
@@ -169,6 +232,7 @@ private data class StoredProfile(
                 privateKeyPassphrase = profile.ssh.privateKeyPassphrase.takeIf { rememberPassword },
                 connectTimeoutMs = profile.ssh.connectTimeoutMs,
             ),
+            groupId = profile.groupId,
         )
     }
 }
