@@ -38,7 +38,7 @@ internal object StringsEnUs {
         // Nav
         StringKeys.Nav.Connections to "Connections",
         StringKeys.Nav.Monitor to "Monitor",
-        StringKeys.Nav.SlowLog to "Slow Log",
+        StringKeys.Nav.RuntimeLogs to "Application Logs",
         StringKeys.Nav.Settings to "Settings",
         StringKeys.Nav.ExpandRail to "Expand sidebar",
         StringKeys.Nav.CollapseRail to "Collapse sidebar",
@@ -52,11 +52,25 @@ internal object StringsEnUs {
         StringKeys.Shell.Dismiss to "Dismiss",
         StringKeys.Shell.ErrorSaveSettings to "Unable to save settings",
 
-        // Monitor / Slow log placeholders
+        // Monitor / Runtime logs
         StringKeys.Monitor.Title to "Live Monitor",
         StringKeys.Monitor.Placeholder to "Monitor placeholder",
-        StringKeys.SlowLog.Title to "Slow Log",
-        StringKeys.SlowLog.Placeholder to "Slow log placeholder",
+        StringKeys.RuntimeLogs.Title to "Application Logs",
+        StringKeys.RuntimeLogs.UnavailablePreview to "Application logs preview unavailable",
+        StringKeys.RuntimeLogs.EmptyTitle to "No application logs yet",
+        StringKeys.RuntimeLogs.EmptyDescription to "Logs produced while RedisStars runs will appear here",
+        StringKeys.RuntimeLogs.FilterAll to "All",
+        StringKeys.RuntimeLogs.SearchPlaceholder to "Search logs…",
+        StringKeys.RuntimeLogs.AutoScroll to "Auto scroll",
+        StringKeys.RuntimeLogs.Pause to "Pause",
+        StringKeys.RuntimeLogs.Resume to "Resume",
+        StringKeys.RuntimeLogs.ClearDisplay to "Clear display",
+        StringKeys.RuntimeLogs.Export to "Export logs",
+        StringKeys.RuntimeLogs.ExportDialogTitle to "Export application logs",
+        StringKeys.RuntimeLogs.ExportSuccess to "Logs exported",
+        StringKeys.RuntimeLogs.ErrorLoadFailed to "Failed to load application logs",
+        StringKeys.RuntimeLogs.ErrorExportFailed to "Failed to export logs",
+        StringKeys.RuntimeLogs.ErrorExportEmpty to "No logs match the current filters",
 
         // Connections pane
         StringKeys.Connections.Title to "Connections",

@@ -140,6 +140,7 @@ fun ConnectionEditorDialog(
                         }
                         when (state.selectedSection) {
                             ConnectionEditorSection.General -> GeneralConnectionSection(
+                                editorMode = state.mode,
                                 form = state.form,
                                 fieldErrors = state.fieldErrors,
                                 onChange = { form -> onUpdateForm { form } },

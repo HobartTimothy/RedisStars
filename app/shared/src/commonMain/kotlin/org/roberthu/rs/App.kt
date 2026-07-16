@@ -12,6 +12,7 @@ import org.roberthu.rs.i18n.AppI18n
 import org.roberthu.rs.i18n.ProvideAppLanguage
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.platform.FilePathPicker
+import org.roberthu.rs.platform.FileSavePicker
 import org.roberthu.rs.platform.TextFileImporter
 import org.roberthu.rs.presentation.AppContainer
 import org.roberthu.rs.port.ConnectionState
@@ -32,6 +33,7 @@ fun App(
     modifier: Modifier = Modifier,
     textFileImporter: TextFileImporter = TextFileImporter { null },
     sshPrivateKeyPathPicker: FilePathPicker = FilePathPicker { _ -> null },
+    runtimeLogSavePicker: FileSavePicker = FileSavePicker { _, _ -> null },
 ) {
     val scope = rememberCoroutineScope()
     val viewModel = remember(container, scope) {
@@ -46,6 +48,9 @@ fun App(
     val keyDetailViewModel = remember(container, scope) {
         container.createKeyDetailViewModel(scope)
     }
+    val runtimeLogsViewModel = remember(container, scope) {
+        container.createRuntimeLogsViewModel(scope)
+    }
     val state by viewModel.state.collectAsState()
     val connectionsState = connectionsViewModel?.state?.collectAsState()?.value
 
@@ -56,6 +61,8 @@ fun App(
                 onAction = viewModel::dispatch,
                 modifier = modifier.fillMaxSize(),
                 connectionState = connectionsState?.connectionState ?: ConnectionState.Disconnected,
+                runtimeLogsViewModel = runtimeLogsViewModel,
+                runtimeLogSavePicker = runtimeLogSavePicker,
                 connectionsContent = {
                     ConnectionsWorkspace(
                         connections = connectionsViewModel,

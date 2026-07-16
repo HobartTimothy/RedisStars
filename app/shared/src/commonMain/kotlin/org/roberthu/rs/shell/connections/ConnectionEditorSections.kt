@@ -52,12 +52,14 @@ import org.roberthu.rs.domain.KeyListViewMode
 import org.roberthu.rs.domain.SshAuthMethod
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
+import org.roberthu.rs.presentation.ConnectionEditorMode
 import org.roberthu.rs.presentation.ConnectionFormState
 import org.roberthu.rs.presentation.HostPortFormState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GeneralConnectionSection(
+    editorMode: ConnectionEditorMode,
     form: ConnectionFormState,
     fieldErrors: Map<String, String>,
     onChange: (ConnectionFormState) -> Unit,
@@ -134,23 +136,28 @@ fun GeneralConnectionSection(
             }
         }
 
-        Text(t(StringKeys.ConnectionEditor.DeploymentModeLabel), style = MaterialTheme.typography.labelLarge)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            modes.forEachIndexed { index, (mode, labelKey) ->
-                SegmentedButton(
-                    selected = form.deploymentMode == mode,
-                    onClick = {
-                        onChange(
-                            form.copy(
-                                deploymentMode = mode,
-                                database = "0",
-                            ),
-                        )
-                    },
-                    shape = SegmentedButtonDefaults.itemShape(index, modes.size),
-                    modifier = Modifier.testTag("connection_editor_mode_${mode.name.lowercase()}"),
-                ) {
-                    Text(t(labelKey))
+        if (editorMode == ConnectionEditorMode.Create) {
+            Text(
+                t(StringKeys.ConnectionEditor.DeploymentModeLabel),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                modes.forEachIndexed { index, (mode, labelKey) ->
+                    SegmentedButton(
+                        selected = form.deploymentMode == mode,
+                        onClick = {
+                            onChange(
+                                form.copy(
+                                    deploymentMode = mode,
+                                    database = "0",
+                                ),
+                            )
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index, modes.size),
+                        modifier = Modifier.testTag("connection_editor_mode_${mode.name.lowercase()}"),
+                    ) {
+                        Text(t(labelKey))
+                    }
                 }
             }
         }

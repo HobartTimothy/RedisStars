@@ -38,7 +38,7 @@ internal object StringsZhCn {
         // Nav
         StringKeys.Nav.Connections to "连接管理",
         StringKeys.Nav.Monitor to "实时监控",
-        StringKeys.Nav.SlowLog to "慢日志",
+        StringKeys.Nav.RuntimeLogs to "运行日志",
         StringKeys.Nav.Settings to "设置",
         StringKeys.Nav.ExpandRail to "展开侧边栏",
         StringKeys.Nav.CollapseRail to "收起侧边栏",
@@ -52,11 +52,25 @@ internal object StringsZhCn {
         StringKeys.Shell.Dismiss to "关闭",
         StringKeys.Shell.ErrorSaveSettings to "无法保存设置",
 
-        // Monitor / Slow log placeholders
+        // Monitor / Runtime logs
         StringKeys.Monitor.Title to "实时监控",
         StringKeys.Monitor.Placeholder to "Monitor placeholder",
-        StringKeys.SlowLog.Title to "慢日志",
-        StringKeys.SlowLog.Placeholder to "Slow log placeholder",
+        StringKeys.RuntimeLogs.Title to "运行日志",
+        StringKeys.RuntimeLogs.UnavailablePreview to "运行日志预览不可用",
+        StringKeys.RuntimeLogs.EmptyTitle to "暂无运行日志",
+        StringKeys.RuntimeLogs.EmptyDescription to "程序运行过程中产生的日志将在这里显示",
+        StringKeys.RuntimeLogs.FilterAll to "全部",
+        StringKeys.RuntimeLogs.SearchPlaceholder to "搜索日志…",
+        StringKeys.RuntimeLogs.AutoScroll to "自动滚动",
+        StringKeys.RuntimeLogs.Pause to "暂停",
+        StringKeys.RuntimeLogs.Resume to "继续",
+        StringKeys.RuntimeLogs.ClearDisplay to "清空显示",
+        StringKeys.RuntimeLogs.Export to "导出日志",
+        StringKeys.RuntimeLogs.ExportDialogTitle to "导出运行日志",
+        StringKeys.RuntimeLogs.ExportSuccess to "日志已导出",
+        StringKeys.RuntimeLogs.ErrorLoadFailed to "无法读取运行日志",
+        StringKeys.RuntimeLogs.ErrorExportFailed to "导出日志失败",
+        StringKeys.RuntimeLogs.ErrorExportEmpty to "当前筛选结果为空，无法导出",
 
         // Connections pane
         StringKeys.Connections.Title to "连接",

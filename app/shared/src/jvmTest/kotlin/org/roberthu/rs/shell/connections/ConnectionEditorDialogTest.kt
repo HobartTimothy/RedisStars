@@ -4,6 +4,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -148,6 +150,43 @@ class ConnectionEditorDialogTest {
 
         onNodeWithTag("connection_editor_title").assertIsDisplayed()
         onNodeWithTag("connection_editor_name").assertTextContains("Existing Redis")
+    }
+
+    @Test
+    fun edit_hidesDeploymentModeSelector() = runComposeUiTest {
+        val form = ConnectionFormState.from(
+            ConnectionProfile(
+                id = "c1",
+                name = "Existing Redis",
+                mode = DeploymentMode.Standalone,
+                host = "localhost",
+            ),
+        )
+        setContent {
+            RedisTheme {
+                ConnectionEditorDialog(
+                    state = ConnectionEditorUiState(
+                        mode = ConnectionEditorMode.Edit,
+                        profileId = "c1",
+                        selectedSection = ConnectionEditorSection.General,
+                        initialForm = form,
+                        form = form,
+                    ),
+                    onSelectSection = {},
+                    onUpdateForm = {},
+                    onRequestClose = {},
+                    onConfirmDiscard = {},
+                    onDismissDiscard = {},
+                    onTest = {},
+                    onSave = {},
+                    onParseUrl = {},
+                )
+            }
+        }
+
+        onAllNodesWithTag("connection_editor_mode_standalone").assertCountEquals(0)
+        onAllNodesWithTag("connection_editor_mode_sentinel").assertCountEquals(0)
+        onAllNodesWithTag("connection_editor_mode_cluster").assertCountEquals(0)
     }
 
     @Test

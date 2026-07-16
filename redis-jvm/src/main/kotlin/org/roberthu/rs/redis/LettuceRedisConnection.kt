@@ -52,6 +52,8 @@ import org.roberthu.rs.port.KeyBrowserPort
 import org.roberthu.rs.port.KeyCommandPort
 import org.roberthu.rs.port.RedisConnectionPort
 import org.roberthu.rs.port.RedisDataPort
+import org.roberthu.rs.util.SensitiveRedactor
+import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.util.Base64
@@ -62,6 +64,7 @@ class LettuceRedisConnection(
     private val reconnectBaseMs: Long = 250,
     private val clientFactory: LettuceClientFactory = LettuceClientFactory(),
 ) : RedisConnectionPort, KeyBrowserPort, KeyCommandPort, RedisDataPort, AutoCloseable {
+    private val logger = LoggerFactory.getLogger(LettuceRedisConnection::class.java)
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     private val resourceLock = Any()
@@ -118,10 +121,12 @@ class LettuceRedisConnection(
         reconnectJob = null
         closeActiveResources()
         state.value = ConnectionState.Connecting
+        logger.info("Connecting to Redis profile {}", SensitiveRedactor.redact(profile.name))
 
         return try {
             openAndStore(profile)
             state.value = ConnectionState.Connected(profile.id, profile.name)
+            logger.info("Connected to Redis profile {}", SensitiveRedactor.redact(profile.name))
             Result.success(Unit)
         } catch (cancellation: CancellationException) {
             state.value = ConnectionState.Disconnected
@@ -129,6 +134,7 @@ class LettuceRedisConnection(
         } catch (failure: Throwable) {
             val error = LettuceExceptionMapper.map(failure)
             state.value = ConnectionState.Failed(error)
+            logger.warn("Redis connection failed for {}: {}", profile.name, error.message)
             // Auth/validation failures will not succeed on retry — do not spin reconnect.
             if (error !is RedisError.AuthFailed && error !is RedisError.Validation) {
                 scheduleReconnect(profile)
@@ -142,6 +148,7 @@ class LettuceRedisConnection(
         reconnectJob = null
         closeActiveResources()
         state.value = ConnectionState.Disconnected
+        logger.info("Disconnected from Redis")
     }
 
     override suspend fun scan(query: ScanQuery): Result<ScanPage> {

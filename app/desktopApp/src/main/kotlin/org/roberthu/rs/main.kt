@@ -9,8 +9,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import org.roberthu.rs.logging.ApplicationLogBootstrap
 
 fun main() {
+    ApplicationLogBootstrap.initialize()
     val root = DesktopCompositionRoot()
     application {
         val appIcon = remember {
@@ -36,6 +38,7 @@ fun main() {
                 modifier = Modifier.fillMaxSize(),
                 textFileImporter = awtTextFileImporter(),
                 sshPrivateKeyPathPicker = awtSshPrivateKeyPathPicker(),
+                runtimeLogSavePicker = awtRuntimeLogSavePicker(),
             )
         }
     }

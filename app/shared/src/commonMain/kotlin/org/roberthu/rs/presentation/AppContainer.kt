@@ -2,7 +2,15 @@ package org.roberthu.rs.presentation
 
 import kotlinx.coroutines.CoroutineScope
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.domain.ApplicationLogEntry
+import org.roberthu.rs.domain.ApplicationLogLevel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
+import org.roberthu.rs.port.ApplicationLogPort
 import org.roberthu.rs.port.ConnectionProfileStore
+import org.roberthu.rs.util.ApplicationLogLineParser
 import org.roberthu.rs.port.KeyBrowserPort
 import org.roberthu.rs.port.KeyCommandPort
 import org.roberthu.rs.port.RedisConnectionPort
@@ -17,8 +25,11 @@ class AppContainer(
     val keyBrowserPort: KeyBrowserPort? = null,
     val keyCommandPort: KeyCommandPort? = null,
     val redisDataPort: RedisDataPort? = null,
+    val applicationLogPort: ApplicationLogPort? = null,
     private val shellViewModelFactory: (UserSettingsStore, CoroutineScope) -> ShellViewModel =
         ::ShellViewModel,
+    private val runtimeLogsViewModelFactory: (ApplicationLogPort, CoroutineScope) -> RuntimeLogsViewModel =
+        ::RuntimeLogsViewModel,
 ) {
     fun createShellViewModel(scope: CoroutineScope): ShellViewModel =
         shellViewModelFactory(userSettingsStore, scope)
@@ -40,12 +51,39 @@ class AppContainer(
         return KeyDetailViewModel(commands, data, scope)
     }
 
+    fun createRuntimeLogsViewModel(scope: CoroutineScope): RuntimeLogsViewModel? =
+        applicationLogPort?.let { runtimeLogsViewModelFactory(it, scope) }
+
     companion object {
         fun preview(): AppContainer = AppContainer(
             connectionProfileStore = InMemoryConnectionProfileStore(),
             userSettingsStore = InMemoryUserSettingsStore(),
+            applicationLogPort = InMemoryApplicationLogPort(),
         )
     }
+}
+
+open class InMemoryApplicationLogPort(
+    initialEntries: List<ApplicationLogEntry> = emptyList(),
+) : ApplicationLogPort {
+    private val entries = initialEntries.toMutableList()
+    private val events = MutableSharedFlow<ApplicationLogEntry>(extraBufferCapacity = 64)
+
+    fun emit(entry: ApplicationLogEntry) {
+        entries.add(entry)
+        events.tryEmit(entry)
+    }
+
+    override suspend fun loadRecent(maxEntries: Int): Result<List<ApplicationLogEntry>> =
+        Result.success(entries.takeLast(maxEntries))
+
+    override fun watch(): Flow<ApplicationLogEntry> = events.asSharedFlow()
+
+    override suspend fun export(entries: List<ApplicationLogEntry>, targetPath: String): Result<Unit> =
+        runCatching {
+            val content = entries.joinToString("\n") { ApplicationLogLineParser.formatForExport(it) }
+            check(content.isNotEmpty())
+        }
 }
 
 class InMemoryUserSettingsStore(

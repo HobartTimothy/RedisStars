@@ -40,7 +40,7 @@ object StringKeys {
     object Nav {
         const val Connections = "nav.connections"
         const val Monitor = "nav.monitor"
-        const val SlowLog = "nav.slow_log"
+        const val RuntimeLogs = "nav.runtime_logs"
         const val Settings = "nav.settings"
         const val ExpandRail = "nav.expand_rail"
         const val CollapseRail = "nav.collapse_rail"
@@ -61,9 +61,23 @@ object StringKeys {
         const val Placeholder = "monitor.placeholder"
     }
 
-    object SlowLog {
-        const val Title = "slow_log.title"
-        const val Placeholder = "slow_log.placeholder"
+    object RuntimeLogs {
+        const val Title = "runtime_logs.title"
+        const val UnavailablePreview = "runtime_logs.unavailable_preview"
+        const val EmptyTitle = "runtime_logs.empty_title"
+        const val EmptyDescription = "runtime_logs.empty_description"
+        const val FilterAll = "runtime_logs.filter_all"
+        const val SearchPlaceholder = "runtime_logs.search_placeholder"
+        const val AutoScroll = "runtime_logs.auto_scroll"
+        const val Pause = "runtime_logs.pause"
+        const val Resume = "runtime_logs.resume"
+        const val ClearDisplay = "runtime_logs.clear_display"
+        const val Export = "runtime_logs.export"
+        const val ExportDialogTitle = "runtime_logs.export_dialog_title"
+        const val ExportSuccess = "runtime_logs.export_success"
+        const val ErrorLoadFailed = "runtime_logs.error_load_failed"
+        const val ErrorExportFailed = "runtime_logs.error_export_failed"
+        const val ErrorExportEmpty = "runtime_logs.error_export_empty"
     }
 
     object Connections {

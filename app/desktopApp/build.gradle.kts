@@ -12,6 +12,8 @@ dependencies {
 
     implementation(compose.desktop.currentOs)
     implementation(libs.kotlinx.coroutinesSwing)
+    implementation(libs.logback)
+    implementation(libs.slf4j.api)
 
     implementation(libs.compose.uiToolingPreview)
 }

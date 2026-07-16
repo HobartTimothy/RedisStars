@@ -31,7 +31,9 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
+import org.roberthu.rs.platform.FileSavePicker
 import org.roberthu.rs.port.ConnectionState
+import org.roberthu.rs.presentation.RuntimeLogsViewModel
 import org.roberthu.rs.theme.connectionIndicatorColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +43,8 @@ fun RedisAppShell(
     onAction: (ShellUiAction) -> Unit,
     modifier: Modifier = Modifier,
     connectionState: ConnectionState = ConnectionState.Disconnected,
+    runtimeLogsViewModel: RuntimeLogsViewModel? = null,
+    runtimeLogSavePicker: FileSavePicker = FileSavePicker { _, _ -> null },
     connectionsContent: @Composable () -> Unit,
 ) {
     val layoutType = rememberShellNavigationSuiteType()
@@ -64,6 +68,8 @@ fun RedisAppShell(
                 state = state,
                 onAction = onAction,
                 connectionState = connectionState,
+                runtimeLogsViewModel = runtimeLogsViewModel,
+                runtimeLogSavePicker = runtimeLogSavePicker,
                 connectionsContent = connectionsContent,
                 modifier = Modifier
                     .weight(1f)
@@ -108,6 +114,8 @@ fun RedisAppShell(
                 state = state,
                 onAction = onAction,
                 connectionState = connectionState,
+                runtimeLogsViewModel = runtimeLogsViewModel,
+                runtimeLogSavePicker = runtimeLogSavePicker,
                 connectionsContent = connectionsContent,
                 modifier = Modifier
                     .fillMaxSize()
@@ -123,6 +131,8 @@ private fun ShellMainContent(
     state: ShellUiState,
     onAction: (ShellUiAction) -> Unit,
     connectionState: ConnectionState,
+    runtimeLogsViewModel: RuntimeLogsViewModel?,
+    runtimeLogSavePicker: FileSavePicker,
     connectionsContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -210,7 +220,10 @@ private fun ShellMainContent(
                     }
 
                     ShellDestination.Monitor -> MonitorPane()
-                    ShellDestination.SlowLog -> SlowLogPane()
+                    ShellDestination.RuntimeLogs -> RuntimeLogsPane(
+                        viewModel = runtimeLogsViewModel,
+                        runtimeLogSavePicker = runtimeLogSavePicker,
+                    )
                     ShellDestination.Settings -> SettingsScreen(
                         darkMode = state.darkMode,
                         onDarkModeChange = {

@@ -36,7 +36,7 @@ class ShellNavigationRailLabelTest {
         onNodeWithTag("sidebar").assertExists()
         onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Connections)).assertIsDisplayed()
         onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Monitor)).assertIsDisplayed()
-        onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.SlowLog)).assertIsDisplayed()
+        onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.RuntimeLogs)).assertIsDisplayed()
     }
 
     @Test
@@ -56,7 +56,7 @@ class ShellNavigationRailLabelTest {
         waitForIdle()
         onNodeWithText(StringCatalog.t(AppLanguage.EnUS, StringKeys.Nav.Connections)).assertIsDisplayed()
         onNodeWithText(StringCatalog.t(AppLanguage.EnUS, StringKeys.Nav.Monitor)).assertIsDisplayed()
-        onNodeWithText(StringCatalog.t(AppLanguage.EnUS, StringKeys.Nav.SlowLog)).assertIsDisplayed()
+        onNodeWithText(StringCatalog.t(AppLanguage.EnUS, StringKeys.Nav.RuntimeLogs)).assertIsDisplayed()
     }
 
     @Test
@@ -105,6 +105,6 @@ class ShellNavigationRailLabelTest {
 private fun ShellDestination.labelKey(): String = when (this) {
     ShellDestination.Connections -> StringKeys.Nav.Connections
     ShellDestination.Monitor -> StringKeys.Nav.Monitor
-    ShellDestination.SlowLog -> StringKeys.Nav.SlowLog
+    ShellDestination.RuntimeLogs -> StringKeys.Nav.RuntimeLogs
     ShellDestination.Settings -> StringKeys.Nav.Settings
 }
