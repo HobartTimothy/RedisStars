@@ -14,6 +14,7 @@ fun awtSshPrivateKeyPathPicker(): FilePathPicker = FilePathPicker { title ->
         title.ifBlank { AppI18n.t(StringKeys.ConnectionEditor.SshPickPrivateKeyTitle) },
         FileDialog.LOAD,
     )
+
     dialog.isMultipleMode = false
     dialog.filenameFilter = FilenameFilter { _, name ->
         name.endsWith(".pem", ignoreCase = true) ||
@@ -21,8 +22,11 @@ fun awtSshPrivateKeyPathPicker(): FilePathPicker = FilePathPicker { title ->
             !name.contains('.') ||
             name.startsWith("id_", ignoreCase = true)
     }
+
     dialog.isVisible = true
+
     val directory = dialog.directory ?: return@FilePathPicker null
     val file = dialog.file ?: return@FilePathPicker null
+
     Path.of(directory, file).toAbsolutePath().normalize().toString()
 }

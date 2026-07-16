@@ -5,13 +5,24 @@ import org.roberthu.rs.logging.desktopLogsDirectory
 import org.roberthu.rs.presentation.AppContainer
 import org.roberthu.rs.redis.LettuceRedisConnection
 
+/**
+ * @constructor 创建[DesktopCompositionRoot]
+ *
+ * @author YueHs
+ *
+ * @date 2026/07/16
+ */
 class DesktopCompositionRoot : AutoCloseable {
     private val redis = LettuceRedisConnection()
+
     private val configDirectory = desktopConfigDirectory()
+
     private val settingsStore = DesktopJsonUserSettingsStore(configDirectory.resolve("settings.json"))
+
     private val profileStore = DesktopJsonConnectionProfileStore(
         configDirectory.resolve("profiles.json"),
     )
+
     private val applicationLogService = DesktopApplicationLogService(desktopLogsDirectory())
 
     val container = AppContainer(

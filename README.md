@@ -1,47 +1,58 @@
 # RedisStars
 
-RedisStars is a JVM desktop client for Redis built with Kotlin and Compose Desktop. It connects directly to Redis and supports key scanning, metadata, TTL and rename/delete operations, plus reading and editing strings, hashes, lists, sets, and sorted sets.
+**English** | [简体中文](./README.zh-CN.md)
 
-The former Server and Web applications, HTTP API, and remote client have been removed. RedisStars is now Desktop-only.
+Cross-platform Redis desktop client built with **Kotlin** and **Compose Desktop**. Connect directly to Redis, browse keys, inspect metadata, and read or edit values — strings, hashes, lists, sets, and sorted sets.
 
-## Architecture
+RedisStars is **desktop-only**. Earlier Server, Web, HTTP API, and remote-client components have been removed.
 
-The Gradle build contains four modules:
+## Features
 
-- [`core`](./core/src) — domain models, validation, use cases, and Redis/persistence ports.
-- [`redis-jvm`](./redis-jvm/src) — Lettuce-based Redis adapter with Standalone, Sentinel, and Cluster connection support.
-- [`app/shared`](./app/shared/src) — Compose UI, unidirectional UI state, and view models, compiled for JVM only.
-- [`app/desktopApp`](./app/desktopApp/src) — desktop entry point and composition root, wiring the shared UI to Lettuce and local JSON persistence.
+- **Connection profiles** — Standalone, Sentinel, and Cluster deployments
+- **SSH tunnel** — optional local port-forward for Standalone connections
+- **Key browser** — pattern scan, TTL, rename, delete
+- **Value editor** — view and edit all common Redis data types
+- **TLS** — peer verification enabled by default when TLS is selected
+- **Local persistence** — connection profiles and settings stored on disk outside the repository
+- **Installers** — native packages for Windows, Linux, and macOS via jpackage
 
-The connection editor dialog supports Standalone, Sentinel, and Cluster profiles.
-Standalone profiles can optionally reach Redis through an SSH local port-forward tunnel.
-See [Redis test environments](./docs/redis-test-environments.md) for local setup notes.
+## Requirements
 
-## Security and local data
+| Purpose | Requirement |
+|---------|-------------|
+| Build & run from source | JDK **17+**, Gradle wrapper |
+| Windows EXE / MSI | [WiX Toolset](https://wixtoolset.org/) (jpackage dependency) |
+| Linux DEB | `fakeroot`, `dpkg` |
+| Linux RPM | `rpm-build` / `rpmbuild` |
+| Integration tests | Docker (Testcontainers; tests skip when unavailable) |
 
-- TLS peer verification defaults to enabled whenever TLS is selected.
-- Saved passwords are omitted unless “remember passwords” is enabled. When enabled, the desktop JSON store contains plaintext credentials; protect the OS account and do not sync or commit the file.
-- Local config is stored outside this repository (`%APPDATA%\RedisStars` on Windows, otherwise `~/.config/redis-stars`).
+Compose Desktop does **not** support cross-compilation — build each installer on its target OS.
 
-## Run
+## Quick start
 
-Windows PowerShell:
+**Windows (PowerShell)**
 
 ```powershell
 .\gradlew.bat :app:desktopApp:run
-.\gradlew.bat :app:desktopApp:hotRun --auto
 ```
 
-Unix:
+**Linux / macOS**
 
 ```bash
 ./gradlew :app:desktopApp:run
+```
+
+Hot reload during UI development:
+
+```bash
 ./gradlew :app:desktopApp:hotRun --auto
 ```
 
-### Packaging the desktop app
+For local Redis instances, see [Redis test environments](./docs/redis-test-environments.md).
 
-Compose Desktop uses `jpackage` (JDK 17+). **No cross-compilation** — build each installer on the matching OS. Output lands under `app/desktopApp/build/compose/binaries/`.
+## Installers
+
+Packaged output is written to `app/desktopApp/build/compose/binaries/`.
 
 | OS | Formats | Gradle tasks |
 |----|---------|--------------|
@@ -49,13 +60,13 @@ Compose Desktop uses `jpackage` (JDK 17+). **No cross-compilation** — build ea
 | Linux | `.deb`, `.rpm` | `:app:desktopApp:packageDeb`, `:app:desktopApp:packageRpm` |
 | macOS | `.dmg`, `.pkg` | `:app:desktopApp:packageDmg`, `:app:desktopApp:packagePkg` |
 
-Convenience tasks:
+**Common tasks**
 
 ```bash
-# Installer(s) for the OS you are on
+# Installer(s) for the current OS
 ./gradlew :app:desktopApp:packageDistributionForCurrentOS
 
-# Unpacked app image (no installer) — useful for local smoke checks
+# Unpacked app image (no installer)
 ./gradlew :app:desktopApp:createDistributable
 ./gradlew :app:desktopApp:runDistributable
 
@@ -63,35 +74,95 @@ Convenience tasks:
 ./gradlew :app:desktopApp:packageUberJarForCurrentOS
 ```
 
-Windows examples (PowerShell):
+**Windows**
 
 ```powershell
 .\gradlew.bat :app:desktopApp:packageExe
 .\gradlew.bat :app:desktopApp:packageMsi
-.\gradlew.bat :app:desktopApp:packageDistributionForCurrentOS
 ```
 
-Linux examples:
+**Linux**
 
 ```bash
 ./gradlew :app:desktopApp:packageDeb
 ./gradlew :app:desktopApp:packageRpm
 ```
 
-**Tooling prerequisites**
+If a packaged app fails at runtime with `ClassNotFoundException`, run `:app:desktopApp:suggestModules` and add the suggested JDK modules under `nativeDistributions { modules(...) }` in `app/desktopApp/build.gradle.kts`.
 
-| Target | Extra tools |
-|--------|-------------|
-| Windows EXE / MSI | [WiX Toolset](https://wixtoolset.org/) on `PATH` (jpackage dependency) |
-| Linux DEB | `fakeroot`, `dpkg` (Debian/Ubuntu) |
-| Linux RPM | `rpm-build` / `rpmbuild` (Fedora/RHEL/openSUSE) |
-| All | JDK **17+** with `jpackage` (`JAVA_HOME` set) |
+## JVM runtime options
 
-If a packaged app fails at runtime with `ClassNotFoundException`, run `./gradlew :app:desktopApp:suggestModules` and add the suggested modules under `nativeDistributions { modules(...) }` in `app/desktopApp/build.gradle.kts`.
+Packaged RedisStars reads JVM startup flags from the jpackage launcher config file **`RedisStars.cfg`**. The native launcher applies these options **before** the JVM starts — heap size, GC, and other `-X`/`-XX` flags cannot be changed from application code.
 
-## Tests and verification
+Default options (defined in `app/desktopApp/build.gradle.kts`):
 
-Run the Desktop verification matrix on Windows:
+| Option | Purpose |
+|--------|---------|
+| `-Xms256m` | Initial heap |
+| `-Xmx2g` | Maximum heap |
+| `-XX:+UseG1GC` | G1 garbage collector |
+| `-Dfile.encoding=UTF-8` | File encoding |
+
+**Config file locations**
+
+| Distribution | Path |
+|--------------|------|
+| Unpacked distributable | `app/desktopApp/build/compose/binaries/main/app/RedisStars/app/RedisStars.cfg` |
+| Windows EXE / MSI (installed) | `<install-dir>\app\RedisStars.cfg` |
+| Linux RPM / DEB (installed) | `/opt/redis-stars/lib/app/RedisStars.cfg` |
+
+On Windows, `<install-dir>` is the directory chosen during installation. Application data lives separately under `%APPDATA%\RedisStars` — that is not the JVM config.
+
+To increase heap memory, edit the `[JavaOptions]` section:
+
+```ini
+java-options=-Xmx4g
+```
+
+Save, fully quit RedisStars, and restart. Only modify `[JavaOptions]`; leave `[Application]` and classpath entries untouched. Back up the file before editing. **Installer upgrades may overwrite** custom settings.
+
+Full details: [docs/jvm-options.md](./docs/jvm-options.md)
+
+**Verify packaged defaults**
+
+```powershell
+.\gradlew.bat :app:desktopApp:createDistributable
+.\gradlew.bat :app:desktopApp:verifyPackagedJvmOptions
+```
+
+## Project structure
+
+```
+RedisStars/
+├── core/              Domain models, validation, use cases, ports
+├── redis-jvm/         Lettuce adapter (Standalone, Sentinel, Cluster)
+├── app/shared/        Compose UI, view models, i18n
+└── app/desktopApp/    Entry point, composition root, packaging config
+```
+
+| Module | Role |
+|--------|------|
+| [`core`](./core/src) | Domain logic and Redis/persistence abstractions |
+| [`redis-jvm`](./redis-jvm/src) | Lettuce-based Redis client |
+| [`app/shared`](./app/shared/src) | Shared Compose UI and presentation layer |
+| [`app/desktopApp`](./app/desktopApp/src) | Desktop launcher and platform wiring |
+
+## Configuration and security
+
+**Application data** (connection profiles, settings) is stored outside the repository:
+
+| OS | Location |
+|----|----------|
+| Windows | `%APPDATA%\RedisStars` |
+| Linux / macOS | `~/.config/redis-stars` |
+
+**Passwords** are saved only when "remember passwords" is enabled. The JSON store then contains **plaintext credentials** — protect your OS account and do not sync or commit this file.
+
+**TLS** peer verification is on by default whenever TLS is selected.
+
+## Development
+
+**Run tests**
 
 ```powershell
 .\gradlew.bat :core:jvmTest
@@ -100,4 +171,22 @@ Run the Desktop verification matrix on Windows:
 .\gradlew.bat :app:desktopApp:compileKotlin
 ```
 
-The `redis-jvm` integration tests use disposable `redis:7-alpine` containers through Testcontainers. They skip through JUnit assumptions when Docker is unavailable.
+**Packaging verification**
+
+```powershell
+.\gradlew.bat :app:desktopApp:createDistributable
+.\gradlew.bat :app:desktopApp:verifyPackagedJvmOptions
+```
+
+The `redis-jvm` module uses disposable `redis:7-alpine` containers via Testcontainers. Tests are skipped automatically when Docker is not available.
+
+## Documentation
+
+| Document | Contents |
+|----------|----------|
+| [docs/jvm-options.md](./docs/jvm-options.md) | JVM launcher config, editing rules, upgrade behavior |
+| [docs/redis-test-environments.md](./docs/redis-test-environments.md) | Local Redis, Sentinel, and Cluster setup |
+
+## License
+
+[MIT](./LICENSE) — Copyright (c) 2026 RobertHU

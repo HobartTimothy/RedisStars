@@ -13,7 +13,9 @@ import org.roberthu.rs.logging.ApplicationLogBootstrap
 
 fun main() {
     ApplicationLogBootstrap.initialize()
+
     val root = DesktopCompositionRoot()
+
     application {
         val appIcon = remember {
             runCatching {
@@ -24,6 +26,7 @@ fun main() {
                 stream.use { BitmapPainter(loadImageBitmap(it)) }
             }.getOrNull()
         }
+
         Window(
             onCloseRequest = {
                 root.close()
