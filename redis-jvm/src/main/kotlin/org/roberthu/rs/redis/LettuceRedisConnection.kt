@@ -23,13 +23,22 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import org.roberthu.rs.domain.BinarySafeString
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.domain.CreateRedisKeyRequest
@@ -57,6 +66,7 @@ import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.util.Base64
+import java.util.concurrent.CompletionStage
 import kotlin.math.min
 
 class LettuceRedisConnection(
@@ -84,8 +94,7 @@ class LettuceRedisConnection(
     @Volatile
     private var closed = false
 
-    @Volatile
-    private var selectedDatabase: Int = 0
+    private val databaseSession = RedisDatabaseSession()
 
     override fun connectionState(): StateFlow<ConnectionState> = state
 
@@ -181,12 +190,11 @@ class LettuceRedisConnection(
             }
         }
 
-        return executeOnDatabase(query.database) { commands ->
-            scanPage(LettuceScanCommands(commands), query)
-        }.also { result ->
-            if (result.isSuccess) {
-                selectedDatabase = query.database
-            }
+        return executeOnDatabaseSuspend(query.database, updateSelected = true) { commands ->
+            scanPage(
+                LettuceScanCommands.fromNodeConnection(activeConnection, commands),
+                query,
+            )
         }
     }
 
@@ -239,12 +247,10 @@ class LettuceRedisConnection(
                     RedisError.NotSupported("Cluster mode only supports database 0"),
                 )
             }
-            selectedDatabase = 0
+            databaseSession.initialize(0)
             return Result.success(Unit)
         }
-        return executeOnDatabase(index) {
-            selectedDatabase = index
-        }
+        return executeOnDatabase(index, updateSelected = true) { }
     }
 
     override suspend fun exists(key: String, database: Int): Result<Boolean> =
@@ -272,18 +278,13 @@ class LettuceRedisConnection(
                     return@withContext Result.success(commands.exists(key) > 0L)
                 }
 
-                val commands = activeConnection.syncClusterCommands() as RedisCommands<String, String>
-                val previousDatabase = selectedDatabase
-                try {
-                    if (database != previousDatabase) {
-                        commands.select(database)
-                    }
-                    Result.success(commands.exists(key) > 0)
-                } finally {
-                    if (database != previousDatabase) {
-                        commands.select(previousDatabase)
-                    }
-                }
+                Result.success(
+                    withActiveSession {
+                        onTemporaryDatabase(database) { commands ->
+                            commands.exists(key) > 0
+                        }
+                    },
+                )
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (failure: Throwable) {
@@ -306,17 +307,14 @@ class LettuceRedisConnection(
                     }
                 }
 
-                val commands = activeConnection.syncClusterCommands()
-                if (activeConnection !is StatefulRedisClusterConnection<*, *>) {
-                    (commands as RedisCommands<String, String>).select(request.database)
-                    selectedDatabase = request.database
+                withActiveSession {
+                    onDatabase(request.database, updateSelected = true) { commands ->
+                        if (commands.exists(request.key) > 0) {
+                            throw RedisError.Validation("该键已存在")
+                        }
+                        createKeyPayload(commands, request)
+                    }
                 }
-
-                if (commands.exists(request.key) > 0) {
-                    return@withContext Result.failure(RedisError.Validation("该键已存在"))
-                }
-
-                createKeyPayload(commands, request)
                 Result.success(Unit)
             } catch (cancellation: CancellationException) {
                 throw cancellation
@@ -565,7 +563,11 @@ class LettuceRedisConnection(
         closed = true
         reconnectJob?.cancel()
         reconnectJob = null
-        closeActiveResourcesBlocking()
+        runBlocking {
+            databaseSession.withExclusiveLock {
+                closeActiveResourcesBlocking()
+            }
+        }
         state.value = ConnectionState.Disconnected
         scope.cancel()
     }
@@ -600,11 +602,15 @@ class LettuceRedisConnection(
             newConnection = newClient.connect(StringCodec.UTF8)
             newBinaryConnection = newClient.connect(ByteArrayCodec.INSTANCE)
             newConnection.syncClusterCommands().ping()
-            selectedDatabase = profile.database
-            if (newConnection !is StatefulRedisClusterConnection<*, *>) {
-                (newConnection.syncClusterCommands() as RedisCommands<String, String>).select(profile.database)
-                (newBinaryConnection.syncClusterCommands() as RedisCommands<ByteArray, ByteArray>)
-                    .select(profile.database)
+            val isCluster = newConnection is StatefulRedisClusterConnection<*, *>
+            if (isCluster) {
+                databaseSession.initialize(0)
+            } else {
+                databaseSession.selectBothOnConnect(
+                    profile.database,
+                    newConnection,
+                    newBinaryConnection,
+                )
             }
             synchronized(resourceLock) {
                 connection = newConnection
@@ -620,7 +626,9 @@ class LettuceRedisConnection(
     }
 
     private suspend fun closeActiveResources() = withContext(Dispatchers.IO) {
-        closeActiveResourcesBlocking()
+        databaseSession.withExclusiveLock {
+            closeActiveResourcesBlocking()
+        }
     }
 
     private fun closeActiveResourcesBlocking() {
@@ -656,16 +664,29 @@ class LettuceRedisConnection(
 
     private suspend fun <T> executeOnDatabase(
         database: Int,
+        updateSelected: Boolean,
         operation: (RedisClusterCommands<String, String>) -> T,
     ): Result<T> = withContext(Dispatchers.IO) {
         try {
-            val activeConnection = connection
-                ?: throw RedisError.ConnectionClosed("Redis connection is not active")
-            val commands = activeConnection.syncClusterCommands()
-            if (activeConnection !is StatefulRedisClusterConnection<*, *>) {
-                (commands as RedisCommands<String, String>).select(database)
-            }
-            Result.success(operation(commands))
+            withActiveSession {
+                onDatabase(database, updateSelected, operation)
+            }.let { Result.success(it) }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (failure: Throwable) {
+            Result.failure(LettuceExceptionMapper.map(failure))
+        }
+    }
+
+    private suspend fun <T> executeOnDatabaseSuspend(
+        database: Int,
+        updateSelected: Boolean,
+        operation: suspend (RedisClusterCommands<String, String>) -> T,
+    ): Result<T> = withContext(Dispatchers.IO) {
+        try {
+            withActiveSession {
+                onDatabaseSuspend(database, updateSelected, operation)
+            }.let { Result.success(it) }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (failure: Throwable) {
@@ -677,11 +698,9 @@ class LettuceRedisConnection(
         operation: (RedisClusterCommands<String, String>) -> T,
     ): Result<T> = withContext(Dispatchers.IO) {
         try {
-            val activeConnection = connection
-                ?: throw RedisError.ConnectionClosed("Redis connection is not active")
-            val commands = activeConnection.syncClusterCommands()
-            ensureSelectedDatabase(activeConnection, commands)
-            Result.success(operation(commands))
+            withActiveSession {
+                onString(operation)
+            }.let { Result.success(it) }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (failure: Throwable) {
@@ -693,11 +712,9 @@ class LettuceRedisConnection(
         operation: (RedisClusterCommands<ByteArray, ByteArray>) -> T,
     ): Result<T> = withContext(Dispatchers.IO) {
         try {
-            val activeConnection = binaryConnection
-                ?: throw RedisError.ConnectionClosed("Redis connection is not active")
-            val commands = activeConnection.syncClusterCommands()
-            ensureBinarySelectedDatabase()
-            Result.success(operation(commands))
+            withActiveSession {
+                onBinary(operation)
+            }.let { Result.success(it) }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (failure: Throwable) {
@@ -705,21 +722,19 @@ class LettuceRedisConnection(
         }
     }
 
-    private fun ensureSelectedDatabase(
-        activeConnection: StatefulConnection<*, *>,
-        stringCommands: RedisClusterCommands<String, String>?,
-    ) {
-        if (activeConnection is StatefulRedisClusterConnection<*, *>) return
-        val commands = stringCommands as? RedisCommands<String, String> ?: return
-        commands.select(selectedDatabase)
-    }
-
-    private fun ensureBinarySelectedDatabase() {
-        val activeConnection = binaryConnection ?: return
-        if (activeConnection is StatefulRedisClusterConnection<*, *>) return
-        @Suppress("UNCHECKED_CAST")
-        val commands = activeConnection.syncClusterCommands() as RedisCommands<ByteArray, ByteArray>
-        commands.select(selectedDatabase)
+    private suspend fun <T> withActiveSession(
+        block: suspend RedisDatabaseSession.SessionScope.() -> T,
+    ): T {
+        val activeStringConnection = connection
+            ?: throw RedisError.ConnectionClosed("Redis connection is not active")
+        val activeBinaryConnection = binaryConnection
+            ?: throw RedisError.ConnectionClosed("Redis connection is not active")
+        return databaseSession.withLock(
+            isCluster = activeStringConnection is StatefulRedisClusterConnection<*, *>,
+            stringConnection = activeStringConnection,
+            binaryConnection = activeBinaryConnection,
+            block = block,
+        )
     }
 
     private fun isClusterConnection(): Boolean =
@@ -966,7 +981,7 @@ private fun RedisCommandExecutionException.isUnknownJsonCommand(): Boolean {
 private fun Any?.discardResult() = Unit
 
 @Suppress("UNCHECKED_CAST")
-private fun <K, V> StatefulConnection<K, V>.syncClusterCommands(): RedisClusterCommands<K, V> =
+internal fun <K, V> StatefulConnection<K, V>.syncClusterCommands(): RedisClusterCommands<K, V> =
     when (this) {
         is StatefulRedisConnection<*, *> ->
             (this as StatefulRedisConnection<K, V>).sync()
@@ -1008,6 +1023,7 @@ internal interface ScanCommands {
 
 internal class LettuceScanCommands(
     private val commands: RedisClusterCommands<String, String>,
+    private val typeInvoker: suspend (String) -> String = { key -> commands.type(key) },
 ) : ScanCommands {
     override fun scan(request: ScanCommandRequest): ScanCommandPage {
         val args = KeyScanArgs()
@@ -1020,9 +1036,34 @@ internal class LettuceScanCommands(
     }
 
     override fun type(key: String): String = commands.type(key)
+
+    suspend fun resolveTypesAsync(
+        keys: List<String>,
+        concurrency: Int = DEFAULT_TYPE_CONCURRENCY,
+    ): List<Pair<String, Result<String>>> = coroutineScope {
+        val semaphore = Semaphore(concurrency.coerceAtLeast(1))
+        keys.map { key ->
+            async {
+                semaphore.withPermit {
+                    key to runCatching { typeInvoker(key) }
+                }
+            }
+        }.awaitAll()
+    }
+
+    companion object {
+        fun fromNodeConnection(
+            connection: StatefulConnection<String, String>,
+            commands: RedisClusterCommands<String, String>,
+        ): LettuceScanCommands = LettuceScanCommands(commands) { key ->
+            lettuceAsyncType(connection, key).awaitCompletionStage()
+        }
+    }
 }
 
-internal fun scanPage(commands: ScanCommands, query: ScanQuery): ScanPage {
+internal const val DEFAULT_TYPE_CONCURRENCY = 16
+
+internal suspend fun scanPage(commands: ScanCommands, query: ScanQuery): ScanPage {
     val requestedType = query.type
     val request = ScanCommandRequest(
         cursorToken = query.cursorToken ?: "0",
@@ -1042,18 +1083,26 @@ internal fun scanPage(commands: ScanCommands, query: ScanQuery): ScanPage {
     }
 
     val partialFailures = mutableListOf<String>()
-    val keys = cursor.keys.mapNotNull { key ->
-        val type = if (typeWasServerFiltered) {
-            requestedType!!
-        } else {
-            try {
-                commands.type(key).toRedisKeyType()
-            } catch (failure: Throwable) {
-                partialFailures += "$key: ${failure.message ?: "TYPE failed"}"
-                RedisKeyType.Unknown
-            }
+    val keys = if (typeWasServerFiltered) {
+        cursor.keys.map { key ->
+            RedisKeySummary(key, requestedType!!)
         }
-        RedisKeySummary(key, type).takeIf { requestedType == null || type == requestedType }
+    } else {
+        val resolvedTypes = when (commands) {
+            is LettuceScanCommands -> commands.resolveTypesAsync(cursor.keys)
+            else -> resolveKeyTypes(commands, cursor.keys)
+        }
+        resolvedTypes.mapNotNull { (key, typeResult) ->
+            val type = typeResult.fold(
+                onSuccess = { it.toRedisKeyType() },
+                onFailure = { failure ->
+                    if (failure is CancellationException) throw failure
+                    partialFailures += "$key: ${failure.message ?: "TYPE failed"}"
+                    RedisKeyType.Unknown
+                },
+            )
+            RedisKeySummary(key, type).takeIf { requestedType == null || type == requestedType }
+        }
     }
     return ScanPage(
         keys = keys,
@@ -1061,6 +1110,50 @@ internal fun scanPage(commands: ScanCommands, query: ScanQuery): ScanPage {
         partialFailures = partialFailures,
     )
 }
+
+internal suspend fun resolveKeyTypes(
+    commands: ScanCommands,
+    keys: List<String>,
+    concurrency: Int = DEFAULT_TYPE_CONCURRENCY,
+): List<Pair<String, Result<String>>> = coroutineScope {
+    val semaphore = Semaphore(concurrency.coerceAtLeast(1))
+    keys.map { key ->
+        async {
+            semaphore.withPermit {
+                key to runCatching { commands.type(key) }
+            }
+        }
+    }.awaitAll()
+}
+
+internal suspend fun <T> CompletionStage<T>.awaitCompletionStage(): T =
+    suspendCancellableCoroutine { continuation ->
+        whenComplete { value, failure ->
+            when {
+                failure != null -> {
+                    if (failure is CancellationException) {
+                        continuation.cancel(failure)
+                    } else {
+                        continuation.resumeWithException(failure)
+                    }
+                }
+                else -> continuation.resume(value)
+            }
+        }
+    }
+
+@Suppress("UNCHECKED_CAST")
+internal fun lettuceAsyncType(
+    connection: StatefulConnection<String, String>,
+    key: String,
+): CompletionStage<String> =
+    when (connection) {
+        is StatefulRedisConnection<*, *> ->
+            (connection as StatefulRedisConnection<String, String>).async().type(key)
+        is StatefulRedisClusterConnection<*, *> ->
+            (connection as StatefulRedisClusterConnection<String, String>).async().type(key)
+        else -> error("Unsupported Lettuce connection type: ${connection::class.qualifiedName}")
+    }
 
 private fun RedisKeyType.redisTypeName(): String = when (this) {
     RedisKeyType.String -> "string"
@@ -1073,7 +1166,7 @@ private fun RedisKeyType.redisTypeName(): String = when (this) {
     RedisKeyType.Other, RedisKeyType.Unknown -> error("A concrete Redis type is required")
 }
 
-private fun String.toRedisKeyType(): RedisKeyType = when (lowercase()) {
+internal fun String.toRedisKeyType(): RedisKeyType = when (lowercase()) {
     "string" -> RedisKeyType.String
     "hash" -> RedisKeyType.Hash
     "list" -> RedisKeyType.List
