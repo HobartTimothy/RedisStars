@@ -18,6 +18,13 @@ import androidx.compose.ui.unit.dp
 import org.roberthu.rs.domain.AppLanguage
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
+import org.roberthu.rs.presentation.BuildInfo
+
+/** MIT License display name as used in the About section. */
+private const val MitLicenseName = "MIT License"
+
+/** Sentinel [BuildInfo] used by Compose previews and tests that do not supply real build metadata. */
+val PreviewBuildInfo = BuildInfo(version = "preview", licenseName = MitLicenseName)
 
 @Composable
 fun SettingsScreen(
@@ -28,8 +35,7 @@ fun SettingsScreen(
     language: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
     modifier: Modifier = Modifier,
-    appVersion: String = "1.0.0-beta",
-    licenseName: String = "Apache License 2.0",
+    buildInfo: BuildInfo = PreviewBuildInfo,
 ) {
     LazyColumn(
         modifier = modifier
@@ -110,13 +116,13 @@ fun SettingsScreen(
         item(key = "about-version") {
             ListItem(
                 headlineContent = { Text(t(StringKeys.Settings.Version)) },
-                supportingContent = { Text(appVersion) },
+                supportingContent = { Text(buildInfo.version) },
             )
         }
         item(key = "about-license") {
             ListItem(
                 headlineContent = { Text(t(StringKeys.Settings.License)) },
-                supportingContent = { Text(licenseName) },
+                supportingContent = { Text(buildInfo.licenseName) },
             )
         }
         item(key = "about-product") {

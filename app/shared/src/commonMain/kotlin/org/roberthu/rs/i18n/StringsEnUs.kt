@@ -42,6 +42,8 @@ internal object StringsEnUs {
         StringKeys.Nav.Settings to "Settings",
         StringKeys.Nav.ExpandRail to "Expand sidebar",
         StringKeys.Nav.CollapseRail to "Collapse sidebar",
+        StringKeys.Nav.RailStateCollapsed to "Collapsed",
+        StringKeys.Nav.RailStateExpanded to "Expanded",
 
         // Shell
         StringKeys.Shell.StatusConnected to "Connected",

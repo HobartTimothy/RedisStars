@@ -10,6 +10,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import org.roberthu.rs.logging.ApplicationLogBootstrap
+import org.roberthu.rs.presentation.BuildInfo
 
 fun main() {
     ApplicationLogBootstrap.initialize()
@@ -42,6 +43,10 @@ fun main() {
                 textFileImporter = awtTextFileImporter(),
                 sshPrivateKeyPathPicker = awtSshPrivateKeyPathPicker(),
                 runtimeLogSavePicker = awtRuntimeLogSavePicker(),
+                buildInfo = BuildInfo(
+                    version = System.getProperty("app.version") ?: "dev",
+                    licenseName = "MIT License",
+                ),
             )
         }
     }

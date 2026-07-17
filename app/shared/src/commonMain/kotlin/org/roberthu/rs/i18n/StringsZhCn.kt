@@ -42,6 +42,8 @@ internal object StringsZhCn {
         StringKeys.Nav.Settings to "设置",
         StringKeys.Nav.ExpandRail to "展开侧边栏",
         StringKeys.Nav.CollapseRail to "收起侧边栏",
+        StringKeys.Nav.RailStateCollapsed to "已收起",
+        StringKeys.Nav.RailStateExpanded to "已展开",
 
         // Shell
         StringKeys.Shell.StatusConnected to "已连接",

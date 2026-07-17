@@ -45,6 +45,7 @@ fun RedisAppShell(
     connectionState: ConnectionState = ConnectionState.Disconnected,
     runtimeLogsViewModel: RuntimeLogsViewModel? = null,
     runtimeLogSavePicker: FileSavePicker = FileSavePicker { _, _ -> null },
+    buildInfo: org.roberthu.rs.presentation.BuildInfo = PreviewBuildInfo,
     connectionsContent: @Composable () -> Unit,
 ) {
     val layoutType = rememberShellNavigationSuiteType()
@@ -71,6 +72,7 @@ fun RedisAppShell(
                 runtimeLogsViewModel = runtimeLogsViewModel,
                 runtimeLogSavePicker = runtimeLogSavePicker,
                 connectionsContent = connectionsContent,
+                buildInfo = buildInfo,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
@@ -117,6 +119,7 @@ fun RedisAppShell(
                 runtimeLogsViewModel = runtimeLogsViewModel,
                 runtimeLogSavePicker = runtimeLogSavePicker,
                 connectionsContent = connectionsContent,
+                buildInfo = buildInfo,
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag("main_content"),
@@ -135,6 +138,7 @@ private fun ShellMainContent(
     runtimeLogSavePicker: FileSavePicker,
     connectionsContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    buildInfo: org.roberthu.rs.presentation.BuildInfo = PreviewBuildInfo,
 ) {
     val connected = connectionState is ConnectionState.Connected
     val connectedStateDescription = t(StringKeys.Shell.StatusConnected)
@@ -237,6 +241,7 @@ private fun ShellMainContent(
                         onLanguageChange = {
                             onAction(ShellUiAction.SetLanguage(it))
                         },
+                        buildInfo = buildInfo,
                         modifier = Modifier
                             .fillMaxSize()
                             .testTag("settings_screen"),

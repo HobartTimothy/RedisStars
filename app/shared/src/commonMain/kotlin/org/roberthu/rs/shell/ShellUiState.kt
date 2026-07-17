@@ -14,8 +14,6 @@ data class ShellUiState(
     val darkMode: Boolean = true,
     val autoConnect: Boolean = false,
     val language: AppLanguage = AppLanguage.EnUS,
-    val nodeName: String = "",
-    val connected: Boolean = false,
     val bannerError: String? = null,
 ) {
     fun toggleRailCollapsed(): ShellUiState = copy(railCollapsed = !railCollapsed)

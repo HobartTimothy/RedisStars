@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
 import org.roberthu.rs.shell.icons.AppIcons
+import org.roberthu.rs.ui.theme.RedisAppConstants
 
 private val ItemHeight = 48.dp
 private val IconSize = 20.dp
@@ -156,7 +157,7 @@ private fun SidebarHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "RedisStars",
+                    text = RedisAppConstants.AppName,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -180,6 +181,11 @@ private fun SidebarToggleButton(
     toggleLabel: String,
     onToggleCollapsed: () -> Unit,
 ) {
+    val railStateDescription = if (railCollapsed) {
+        t(StringKeys.Nav.RailStateCollapsed)
+    } else {
+        t(StringKeys.Nav.RailStateExpanded)
+    }
     TooltipBox(
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
         tooltip = { PlainTooltip { Text(toggleLabel) } },
@@ -191,7 +197,7 @@ private fun SidebarToggleButton(
                 .testTag("sidebar_toggle")
                 .semantics {
                     contentDescription = toggleLabel
-                    stateDescription = if (railCollapsed) "collapsed" else "expanded"
+                    stateDescription = railStateDescription
                 },
         ) {
             Icon(

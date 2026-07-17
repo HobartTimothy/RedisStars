@@ -53,6 +53,7 @@ import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.ConnectionEditorMode
 import org.roberthu.rs.presentation.ConnectionFormState
 import org.roberthu.rs.presentation.HostPortFormState
+import org.roberthu.rs.theme.toComposeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -805,15 +806,8 @@ private fun TagColorSelector(
     onSelect: (ConnectionTagColor) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tagColors = listOf(
-        ConnectionTagColor.None to null,
-        ConnectionTagColor.Red to Color(0xFFE53935),
-        ConnectionTagColor.Orange to Color(0xFFFB8C00),
-        ConnectionTagColor.Yellow to Color(0xFFFDD835),
-        ConnectionTagColor.Green to Color(0xFF43A047),
-        ConnectionTagColor.Blue to Color(0xFF1E88E5),
-        ConnectionTagColor.Purple to Color(0xFF8E24AA),
-    )
+    // Use the canonical palette from ConnectionTagColors to avoid duplicate definitions.
+    val tagColors = ConnectionTagColor.entries.map { color -> color to color.toComposeColor() }
 
     Column(
         modifier = modifier.fillMaxWidth(),

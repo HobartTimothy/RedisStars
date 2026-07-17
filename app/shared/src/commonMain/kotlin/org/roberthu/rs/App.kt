@@ -26,6 +26,7 @@ fun App(
     textFileImporter: TextFileImporter = TextFileImporter { null },
     sshPrivateKeyPathPicker: FilePathPicker = FilePathPicker { _ -> null },
     runtimeLogSavePicker: FileSavePicker = FileSavePicker { _, _ -> null },
+    buildInfo: org.roberthu.rs.presentation.BuildInfo = org.roberthu.rs.shell.PreviewBuildInfo,
 ) {
     val scope = rememberCoroutineScope()
     val viewModel = remember(container, scope) {
@@ -55,6 +56,7 @@ fun App(
                 connectionState = connectionsState?.connectionState ?: ConnectionState.Disconnected,
                 runtimeLogsViewModel = runtimeLogsViewModel,
                 runtimeLogSavePicker = runtimeLogSavePicker,
+                buildInfo = buildInfo,
                 connectionsContent = {
                     ConnectionsWorkspace(
                         connections = connectionsViewModel,

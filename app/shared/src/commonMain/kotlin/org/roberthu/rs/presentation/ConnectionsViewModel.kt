@@ -597,4 +597,40 @@ class ConnectionsViewModel(
         if (previous.databaseFilterText != next.databaseFilterText) add("databaseFilterText")
         if (previous.tagColor != next.tagColor) add("tagColor")
     }
+
+    /**
+     * Single entry-point for all UI-initiated events.
+     *
+     * New call sites should prefer `dispatch(action)` over calling individual methods directly.
+     * Existing direct method calls remain supported for backward compatibility while callers
+     * are progressively migrated.
+     */
+    fun dispatch(action: ConnectionsUiAction) {
+        when (action) {
+            is ConnectionsUiAction.SelectProfile -> select(action.profile)
+            is ConnectionsUiAction.SelectGroup -> selectGroup(action.groupId)
+            is ConnectionsUiAction.ToggleGroupExpanded -> toggleGroupExpanded(action.groupId)
+            is ConnectionsUiAction.BeginCreate -> beginCreate(action.groupId)
+            is ConnectionsUiAction.Connect -> connect(action.profile)
+            is ConnectionsUiAction.TestProfile -> test(action.profile)
+            is ConnectionsUiAction.EditProfile -> edit(action.profile)
+            is ConnectionsUiAction.RequestDeleteProfile -> requestDelete(action.profile)
+            ConnectionsUiAction.ConfirmDeleteProfile -> confirmDelete()
+            ConnectionsUiAction.DismissDeleteConfirmation -> dismissDelete()
+            ConnectionsUiAction.OpenCreateGroupDialog -> openAddGroupDialog()
+            is ConnectionsUiAction.UpdateGroupName -> updateGroupName(action.name)
+            ConnectionsUiAction.ConfirmCreateGroup -> confirmCreateGroup()
+            ConnectionsUiAction.DismissGroupDialog -> dismissGroupDialog()
+            is ConnectionsUiAction.SelectEditorSection -> selectEditorSection(action.section)
+            is ConnectionsUiAction.UpdateEditorForm -> updateEditorForm(action.transform)
+            ConnectionsUiAction.RequestCloseEditor -> requestCloseEditor()
+            ConnectionsUiAction.ConfirmDiscardEditor -> confirmDiscardEditor()
+            ConnectionsUiAction.DismissDiscardConfirmation -> dismissDiscardConfirmation()
+            ConnectionsUiAction.SaveEditor -> saveEditor()
+            ConnectionsUiAction.TestEditor -> testEditor()
+            is ConnectionsUiAction.ParseClipboardUrl -> parseClipboardUrl(action.url)
+            is ConnectionsUiAction.MoveSidebarItem -> moveSidebarItem(action.request)
+            ConnectionsUiAction.DismissError -> dismissError()
+        }
+    }
 }

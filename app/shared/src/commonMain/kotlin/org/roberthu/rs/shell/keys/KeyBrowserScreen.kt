@@ -37,6 +37,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
+import org.roberthu.rs.ui.components.RedisTooltipIconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -94,68 +95,41 @@ fun KeyBrowserScreen(
                 style = MaterialTheme.typography.titleSmall,
             )
             Row {
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                    tooltip = {
-                        Text(
-                            if (state.keyListView == KeyListViewMode.Tree) {
-                                t(StringKeys.Keys.ViewFlat)
-                            } else {
-                                t(StringKeys.Keys.ViewTree)
-                            },
+                val viewToggleLabel = if (state.keyListView == KeyListViewMode.Tree) {
+                    t(StringKeys.Keys.ViewFlat)
+                } else {
+                    t(StringKeys.Keys.ViewTree)
+                }
+                val viewToggleIcon = if (state.keyListView == KeyListViewMode.Tree) {
+                    AppIcons.AccountTree
+                } else {
+                    Icons.Default.List
+                }
+                RedisTooltipIconButton(
+                    tooltip = viewToggleLabel,
+                    onClick = {
+                        onKeyListViewChange(
+                            if (state.keyListView == KeyListViewMode.Tree) KeyListViewMode.Flat else KeyListViewMode.Tree,
                         )
                     },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = {
-                            onKeyListViewChange(
-                                if (state.keyListView == KeyListViewMode.Tree) {
-                                    KeyListViewMode.Flat
-                                } else {
-                                    KeyListViewMode.Tree
-                                },
-                            )
-                        },
-                        enabled = enabled,
-                        modifier = Modifier.testTag("keys_view_toggle"),
-                    ) {
-                        Icon(
-                            if (state.keyListView == KeyListViewMode.Tree) {
-                                AppIcons.AccountTree
-                            } else {
-                                Icons.Default.List
-                            },
-                            contentDescription = t(StringKeys.Keys.ViewToggle),
-                        )
-                    }
-                }
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                    tooltip = { Text(t(StringKeys.Keys.Refresh)) },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = onRefresh,
-                        enabled = enabled && !state.loading,
-                        modifier = Modifier.testTag("keys_refresh"),
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = t(StringKeys.Keys.Refresh))
-                    }
-                }
-                TooltipBox(
-                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                    tooltip = { Text(t(StringKeys.Keys.Add)) },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = onOpenAddKey,
-                        enabled = enabled,
-                        modifier = Modifier.testTag("keys_add"),
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = t(StringKeys.Keys.Add))
-                    }
-                }
+                    imageVector = viewToggleIcon,
+                    enabled = enabled,
+                    testTag = "keys_view_toggle",
+                )
+                RedisTooltipIconButton(
+                    tooltip = t(StringKeys.Keys.Refresh),
+                    onClick = onRefresh,
+                    imageVector = Icons.Default.Refresh,
+                    enabled = enabled && !state.loading,
+                    testTag = "keys_refresh",
+                )
+                RedisTooltipIconButton(
+                    tooltip = t(StringKeys.Keys.Add),
+                    onClick = onOpenAddKey,
+                    imageVector = Icons.Default.Add,
+                    enabled = enabled,
+                    testTag = "keys_add",
+                )
             }
         }
 

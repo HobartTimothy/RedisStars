@@ -15,7 +15,8 @@ import org.roberthu.rs.i18n.StringCatalog
 import org.roberthu.rs.theme.RedisTheme
 
 /**
- * Compose UI checks: selected NavigationRail labels stay visible with sufficient contrast.
+ * Compose UI checks: selected NavigationRail labels stay visible with sufficient contrast,
+ * and collapsed state provides correct accessibility semantics.
  */
 @OptIn(ExperimentalTestApi::class)
 class ShellNavigationRailLabelTest {
@@ -102,7 +103,6 @@ class ShellNavigationRailLabelTest {
         onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Settings)).assertIsDisplayed()
         onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Connections)).assertIsDisplayed()
     }
-}
 
     @Test
     fun whenCollapsed_labelsAreNotRenderedAsText() = runComposeUiTest {

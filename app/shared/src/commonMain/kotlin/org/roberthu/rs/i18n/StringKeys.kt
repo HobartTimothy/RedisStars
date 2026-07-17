@@ -44,6 +44,10 @@ object StringKeys {
         const val Settings = "nav.settings"
         const val ExpandRail = "nav.expand_rail"
         const val CollapseRail = "nav.collapse_rail"
+        /** Accessibility state description when the rail is collapsed. */
+        const val RailStateCollapsed = "nav.rail_state_collapsed"
+        /** Accessibility state description when the rail is expanded. */
+        const val RailStateExpanded = "nav.rail_state_expanded"
     }
 
     object Shell {
