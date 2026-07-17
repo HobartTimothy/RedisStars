@@ -20,7 +20,8 @@ class DesktopCompositionRoot : AutoCloseable {
     private val settingsStore = DesktopJsonUserSettingsStore(configDirectory.resolve("settings.json"))
 
     private val profileStore = DesktopJsonConnectionProfileStore(
-        configDirectory.resolve("profiles.json"),
+        file = configDirectory.resolve("profiles.json"),
+        rememberPasswords = settingsStore::rememberPasswordsEnabled,
     )
 
     private val applicationLogService = DesktopApplicationLogService(desktopLogsDirectory())

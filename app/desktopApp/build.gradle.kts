@@ -93,6 +93,10 @@ dependencies {
     implementation(libs.kotlinx.coroutinesSwing)
     implementation(libs.logback)
     implementation(libs.slf4j.api)
+
+    testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
 
 compose.desktop {
