@@ -119,22 +119,24 @@ fun ConnectionsWorkspace(
             onMoveSidebarItem = connections::moveSidebarItem,
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer),
         )
-        KeyBrowserScreen(
-            state = browserState,
-            enabled = connected,
-            onPatternChange = browser::setPattern,
-            onRefresh = browser::refresh,
-            onLoadMore = browser::loadMore,
-            onCancel = browser::cancel,
-            onSelect = { key ->
-                browser.select(key)
-                detail.load(key)
-            },
-            onOpenAddKey = browser::openAddKeyDialog,
-            onSelectDatabase = browser::selectDatabase,
-            onKeyListViewChange = browser::setKeyListView,
-            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
-        )
+        if (connected) {
+            KeyBrowserScreen(
+                state = browserState,
+                enabled = true,
+                onPatternChange = browser::setPattern,
+                onRefresh = browser::refresh,
+                onLoadMore = browser::loadMore,
+                onCancel = browser::cancel,
+                onSelect = { key ->
+                    browser.select(key)
+                    detail.load(key)
+                },
+                onOpenAddKey = browser::openAddKeyDialog,
+                onSelectDatabase = browser::selectDatabase,
+                onKeyListViewChange = browser::setKeyListView,
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
+            )
+        }
         KeyDetailScreen(
             state = detailState,
             onRefresh = detail::refresh,

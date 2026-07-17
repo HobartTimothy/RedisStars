@@ -78,6 +78,7 @@ fun KeyBrowserScreen(
 ) {
     Column(
         modifier = modifier
+            .testTag("key_browser_pane")
             .widthIn(min = 340.dp)
             .width(340.dp)
             .fillMaxHeight()
