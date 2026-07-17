@@ -364,13 +364,17 @@ class LettuceRedisConnection(
     override suspend fun delete(keys: List<String>): Result<Long> {
         if (keys.isEmpty()) return Result.success(0)
         return execute { commands ->
-            val arguments = keys.toTypedArray()
-            try {
-                commands.unlink(*arguments)
-            } catch (failure: RedisCommandExecutionException) {
-                if (!failure.isUnsupportedUnlink()) throw failure
-                commands.del(*arguments)
+            var deleted = 0L
+            keys.chunked(UNLINK_BATCH_SIZE).forEach { batch ->
+                val arguments = batch.toTypedArray()
+                deleted += try {
+                    commands.unlink(*arguments)
+                } catch (failure: RedisCommandExecutionException) {
+                    if (!failure.isUnsupportedUnlink()) throw failure
+                    commands.del(*arguments)
+                }
             }
+            deleted
         }
     }
 
@@ -739,8 +743,8 @@ class LettuceRedisConnection(
             RedisKeyType.Hash -> {
                 val payload = request.payload as RedisKeyPayload.HashPayload
                 try {
-                    payload.fields.forEach { (field, value) ->
-                        commands.hset(request.key, field, value)
+                    if (payload.fields.isNotEmpty()) {
+                        commands.hset(request.key, payload.fields.toMap())
                     }
                     applyTtl(commands, request.key, request.ttlSeconds)
                 } catch (failure: Throwable) {
@@ -774,8 +778,9 @@ class LettuceRedisConnection(
             RedisKeyType.ZSet -> {
                 val payload = request.payload as RedisKeyPayload.ZSetPayload
                 try {
-                    payload.entries.forEach { (score, member) ->
-                        commands.zadd(request.key, score, member)
+                    if (payload.entries.isNotEmpty()) {
+                        val scored = payload.entries.associate { (score, member) -> member to score }
+                        commands.zadd(request.key, scored)
                     }
                     applyTtl(commands, request.key, request.ttlSeconds)
                 } catch (failure: Throwable) {
@@ -931,6 +936,7 @@ private fun List<String>.toRedisByteArrays(): Array<ByteArray> =
     map(String::toRedisBytes).toTypedArray()
 
 private const val DEFAULT_DATABASE_COUNT = 16
+private const val UNLINK_BATCH_SIZE = 500
 
 private enum class RedisJsonCommand : ProtocolKeyword {
     JSON_SET {
