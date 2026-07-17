@@ -1,6 +1,7 @@
 package org.roberthu.rs.redis
 
 import io.lettuce.core.RedisCommandExecutionException
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.roberthu.rs.domain.RedisKeyType
 import org.roberthu.rs.domain.ScanQuery
@@ -9,7 +10,7 @@ import kotlin.test.assertTrue
 
 class LettuceScanExecutorTest {
     @Test
-    fun retriesWithoutServerTypeAndFiltersOnlyReturnedPage() {
+    fun retriesWithoutServerTypeAndFiltersOnlyReturnedPage() = runBlocking {
         val commands = RecordingScanCommands(
             pages = ArrayDeque(
                 listOf(
@@ -40,7 +41,7 @@ class LettuceScanExecutorTest {
     }
 
     @Test
-    fun usesCountHintAndScanOnly() {
+    fun usesCountHintAndScanOnly() = runBlocking {
         val commands = RecordingScanCommands(
             pages = ArrayDeque(
                 listOf(Result.success(ScanCommandPage(emptyList(), "0", true))),
@@ -54,9 +55,46 @@ class LettuceScanExecutorTest {
         assertTrue(commands.commandNames.all { it == "scan" || it == "type" })
     }
 
+    @Test
+    fun resolveKeyTypesPreservesOrderAndReportsPartialFailures() = runBlocking {
+        val commands = RecordingScanCommands(
+            pages = ArrayDeque(),
+            types = mapOf(
+                "key-a" to "string",
+                "key-c" to "hash",
+            ),
+            failingKeys = setOf("key-b"),
+        )
+
+        val resolved = resolveKeyTypes(
+            commands,
+            listOf("key-a", "key-b", "key-c"),
+            concurrency = 2,
+        )
+
+        assertEquals(listOf("key-a", "key-b", "key-c"), resolved.map { it.first })
+        assertEquals("string", resolved[0].second.getOrThrow())
+        assertTrue(resolved[1].second.isFailure)
+        assertEquals("hash", resolved[2].second.getOrThrow())
+    }
+
+    @Test
+    fun resolveKeyTypesUsesBoundedConcurrency() = runBlocking {
+        val commands = ConcurrentRecordingScanCommands(
+            keys = listOf("k1", "k2", "k3", "k4", "k5"),
+            typeDelayMs = 20,
+        )
+
+        val resolved = resolveKeyTypes(commands, commands.keys, concurrency = 2)
+
+        assertEquals(commands.keys, resolved.map { it.first })
+        assertTrue(commands.maxInFlight <= 2)
+    }
+
     private class RecordingScanCommands(
         private val pages: ArrayDeque<Result<ScanCommandPage>>,
         private val types: Map<String, String> = emptyMap(),
+        private val failingKeys: Set<String> = emptySet(),
     ) : ScanCommands {
         val scanCalls = mutableListOf<ScanCommandRequest>()
         val typeCalls = mutableListOf<String>()
@@ -71,7 +109,36 @@ class LettuceScanExecutorTest {
         override fun type(key: String): String {
             commandNames += "type"
             typeCalls += key
+            if (key in failingKeys) {
+                throw RedisCommandExecutionException("ERR type failed for $key")
+            }
             return types.getValue(key)
+        }
+    }
+
+    private class ConcurrentRecordingScanCommands(
+        val keys: List<String>,
+        private val typeDelayMs: Long,
+    ) : ScanCommands {
+        var maxInFlight = 0
+        private var inFlight = 0
+
+        override fun scan(request: ScanCommandRequest): ScanCommandPage =
+            ScanCommandPage(emptyList(), "0", true)
+
+        override fun type(key: String): String {
+            synchronized(this) {
+                inFlight += 1
+                maxInFlight = maxOf(maxInFlight, inFlight)
+            }
+            try {
+                Thread.sleep(typeDelayMs)
+                return "string"
+            } finally {
+                synchronized(this) {
+                    inFlight -= 1
+                }
+            }
         }
     }
 }
