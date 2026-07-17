@@ -19,6 +19,9 @@ val redisStarsJvmArgs = listOf(
     "-Dfile.encoding=UTF-8",
 )
 
+val redisStarsVersion: String =
+    providers.gradleProperty("redisStars.version").getOrElse("1.0.0")
+
 abstract class VerifyPackagedJvmOptionsTask : DefaultTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -90,8 +93,6 @@ dependencies {
     implementation(libs.kotlinx.coroutinesSwing)
     implementation(libs.logback)
     implementation(libs.slf4j.api)
-
-    implementation(libs.compose.uiToolingPreview)
 }
 
 compose.desktop {
@@ -111,7 +112,7 @@ compose.desktop {
             )
 
             packageName = "RedisStars"
-            packageVersion = "1.0.0"
+            packageVersion = redisStarsVersion
             description = "Cross-platform Redis desktop client"
             vendor = "RobertHU"
             copyright = "© 2026 RobertHU. All rights reserved."
@@ -123,8 +124,8 @@ compose.desktop {
                 dirChooser = true
                 // Keep this UUID stable across releases so Windows installers can upgrade in place.
                 upgradeUuid = "A8E2C4F0-9B1D-4E6A-8C3F-2D7B5A9E1F04"
-                msiPackageVersion = "1.0.0"
-                exePackageVersion = "1.0.0"
+                msiPackageVersion = redisStarsVersion
+                exePackageVersion = redisStarsVersion
             }
 
             linux {
@@ -134,16 +135,16 @@ compose.desktop {
                 menuGroup = "Development"
                 appCategory = "Development"
                 appRelease = "1"
-                debPackageVersion = "1.0.0"
-                rpmPackageVersion = "1.0.0"
+                debPackageVersion = redisStarsVersion
+                rpmPackageVersion = redisStarsVersion
             }
 
             macOS {
                 iconFile.set(project.file("icons/icon.icns"))
                 bundleID = "org.roberthu.rs"
                 dockName = "RedisStars"
-                dmgPackageVersion = "1.0.0"
-                pkgPackageVersion = "1.0.0"
+                dmgPackageVersion = redisStarsVersion
+                pkgPackageVersion = redisStarsVersion
             }
         }
     }

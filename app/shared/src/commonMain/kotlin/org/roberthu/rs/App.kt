@@ -7,7 +7,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import org.roberthu.rs.i18n.AppI18n
 import org.roberthu.rs.i18n.ProvideAppLanguage
 import org.roberthu.rs.i18n.StringKeys
@@ -19,13 +18,6 @@ import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.shell.RedisAppShell
 import org.roberthu.rs.shell.connections.ConnectionsWorkspace
 import org.roberthu.rs.theme.RedisTheme
-
-@Composable
-@Preview
-fun App(modifier: Modifier = Modifier) {
-    val container = remember { AppContainer.preview() }
-    App(container = container, modifier = modifier)
-}
 
 @Composable
 fun App(
