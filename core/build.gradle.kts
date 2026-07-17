@@ -1,17 +1,9 @@
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.kotlinJvm)
 }
 
-kotlin {
-    jvm()
-
-    sourceSets {
-        commonMain.dependencies {
-            implementation(libs.kotlinx.coroutines.core)
-        }
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
-            implementation(libs.kotlinx.coroutines.test)
-        }
-    }
+dependencies {
+    implementation(libs.kotlinx.coroutines.core)
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

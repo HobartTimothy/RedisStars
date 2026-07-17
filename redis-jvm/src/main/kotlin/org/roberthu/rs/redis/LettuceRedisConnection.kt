@@ -648,14 +648,8 @@ class LettuceRedisConnection(
         oldClient.shutdownQuietly()
     }
 
-    private fun backoffMs(attempt: Int, capMs: Long): Long {
-        var delayMs = reconnectBaseMs.coerceAtLeast(1)
-        repeat((attempt - 1).coerceIn(0, 62)) {
-            if (delayMs >= capMs || delayMs > Long.MAX_VALUE / 2) return min(delayMs, capMs)
-            delayMs *= 2
-        }
-        return min(delayMs, capMs)
-    }
+    private fun backoffMs(attempt: Int, capMs: Long): Long =
+        RedisReconnectBackoff.delayMs(attempt, reconnectBaseMs, capMs)
 
     private fun validateProfile(profile: ConnectionProfile): RedisError? =
         profile.validate()

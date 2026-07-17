@@ -165,7 +165,7 @@ RedisStars/
 **Run tests**
 
 ```powershell
-.\gradlew.bat :core:jvmTest
+.\gradlew.bat :core:test
 .\gradlew.bat :redis-jvm:test
 .\gradlew.bat :app:shared:jvmTest
 .\gradlew.bat :app:desktopApp:compileKotlin
