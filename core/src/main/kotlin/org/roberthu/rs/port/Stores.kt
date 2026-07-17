@@ -11,6 +11,21 @@ interface ConnectionProfileStore {
     suspend fun listGroups(): List<ConnectionGroup> = emptyList()
     suspend fun upsertGroup(group: ConnectionGroup) = Unit
     suspend fun deleteGroup(id: String) = Unit
+
+    /** Atomically replaces all groups and profiles, used for sidebar reorder transactions. */
+    suspend fun replaceAll(
+        profiles: List<ConnectionProfile>,
+        groups: List<ConnectionGroup>,
+    ) {
+        val existingProfiles = list().associateBy { it.id }
+        val existingGroups = listGroups().associateBy { it.id }
+        existingProfiles.keys.filterNot { it in profiles.map(ConnectionProfile::id).toSet() }
+            .forEach { delete(it) }
+        existingGroups.keys.filterNot { it in groups.map(ConnectionGroup::id).toSet() }
+            .forEach { deleteGroup(it) }
+        groups.forEach { upsertGroup(it) }
+        profiles.forEach { upsert(it) }
+    }
 }
 
 data class UserSettings(

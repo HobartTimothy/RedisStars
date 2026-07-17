@@ -116,6 +116,7 @@ fun ConnectionsWorkspace(
             onDismissDelete = connections::dismissDelete,
             onDismissError = connections::dismissError,
             onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
+            onMoveSidebarItem = connections::moveSidebarItem,
             modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer),
         )
         KeyBrowserScreen(

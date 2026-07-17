@@ -7,6 +7,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.domain.SidebarOrder
+import org.roberthu.rs.domain.SidebarTreeBuilder
 import org.roberthu.rs.port.ConnectionProfileStore
 import org.roberthu.rs.port.UserSettings
 import org.roberthu.rs.port.UserSettingsStore
@@ -115,14 +117,33 @@ class DesktopJsonConnectionProfileStore(
     override suspend fun deleteGroup(id: String) {
         mutex.withLock {
             val current = loadedConnections()
+            val rootOrders = SidebarTreeBuilder.rootSortOrders(current.profiles, current.groups)
+            var nextRootOrder = SidebarOrder.nextSortOrder(rootOrders)
+            val updatedProfiles = current.profiles.map { profile ->
+                if (profile.groupId == id) {
+                    profile.copy(
+                        groupId = null,
+                        sortOrder = nextRootOrder.also { nextRootOrder += SidebarOrder.STEP },
+                    )
+                } else {
+                    profile
+                }
+            }
             persist(
                 current.copy(
                     groups = current.groups.filterNot { it.id == id },
-                    profiles = current.profiles.map {
-                        if (it.groupId == id) it.copy(groupId = null) else it
-                    },
+                    profiles = updatedProfiles,
                 ),
             )
+        }
+    }
+
+    override suspend fun replaceAll(
+        profiles: List<ConnectionProfile>,
+        groups: List<ConnectionGroup>,
+    ) {
+        mutex.withLock {
+            persist(StoredConnections(groups = groups, profiles = profiles))
         }
     }
 

@@ -130,7 +130,7 @@ class StoredDataCodecTest {
 
     @Test
     fun newDocumentWithGroupsRoundTrips() {
-        val group = ConnectionGroup(id = "g1", name = "Dev", order = 0, expanded = true)
+        val group = ConnectionGroup(id = "g1", name = "Dev", sortOrder = 1024L, expanded = true)
         val profile = ConnectionProfile(
             id = "c1",
             name = "Local",
@@ -145,5 +145,22 @@ class StoredDataCodecTest {
         val decoded = StoredDataCodec.decodeConnections(encoded)
         assertEquals(listOf("g1"), decoded.groups.map { it.id })
         assertEquals("g1", decoded.profiles.single().groupId)
+        assertTrue(decoded.profiles.single().sortOrder > 0L)
+        assertTrue(decoded.groups.single().sortOrder > 0L)
+        assertTrue("\"schemaVersion\": 2" in encoded || "schemaVersion" in encoded)
+    }
+
+    @Test
+    fun legacyGroupOrderMigratesToSortOrder() {
+        val legacy = """
+            {
+              "schemaVersion": 1,
+              "groups": [{"id":"g1","name":"Dev","order":2,"expanded":true}],
+              "profiles": [{"id":"c1","name":"Local","mode":"Standalone","host":"127.0.0.1","groupId":"g1"}]
+            }
+        """.trimIndent()
+        val decoded = StoredDataCodec.decodeConnections(legacy)
+        assertTrue(decoded.groups.single().sortOrder > 0L)
+        assertTrue(decoded.profiles.single().sortOrder > 0L)
     }
 }

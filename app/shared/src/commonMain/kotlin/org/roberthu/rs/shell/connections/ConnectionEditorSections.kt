@@ -66,7 +66,7 @@ fun GeneralConnectionSection(
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     var groupExpanded by remember { mutableStateOf(false) }
-    val sortedGroups = remember(groups) { groups.sortedBy { it.order } }
+    val sortedGroups = remember(groups) { groups.sortedBy { it.sortOrder } }
     val selectedGroupLabel = sortedGroups.firstOrNull { it.id == form.groupId }?.name
         ?: t(StringKeys.ConnectionEditor.RootGroup)
     val modes = listOf(

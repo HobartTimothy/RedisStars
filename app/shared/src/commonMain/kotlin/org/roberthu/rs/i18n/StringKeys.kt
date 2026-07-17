@@ -110,6 +110,9 @@ object StringKeys {
         const val ErrorTestFailed = "connections.error_test_failed"
         const val ErrorGroupNameEmpty = "connections.error_group_name_empty"
         const val ErrorGroupNameDuplicate = "connections.error_group_name_duplicate"
+        const val DragHandle = "connections.drag_handle"
+        const val MoveToGroup = "connections.move_to_group"
+        const val ReorderFailed = "connections.reorder_failed"
     }
 
     object ConnectionEditor {

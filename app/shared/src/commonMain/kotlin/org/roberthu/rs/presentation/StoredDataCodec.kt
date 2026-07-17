@@ -10,6 +10,8 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import org.roberthu.rs.domain.ConnectionBrowserOptions
 import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.domain.SidebarOrder
+import org.roberthu.rs.domain.SidebarSortMigration
 import org.roberthu.rs.domain.ConnectionTagColor
 import org.roberthu.rs.domain.DatabaseFilterMode
 import org.roberthu.rs.domain.DeploymentMode
@@ -44,18 +46,20 @@ object StoredDataCodec {
     fun decodeProfiles(value: String): List<ConnectionProfile> =
         decodeConnections(value).profiles
 
-    fun encodeConnections(data: StoredConnections, rememberPasswords: Boolean): String =
-        json.encodeToString(
+    fun encodeConnections(data: StoredConnections, rememberPasswords: Boolean): String {
+        val migrated = migrateConnections(data)
+        return json.encodeToString(
             StoredConnectionsDocument(
-                schemaVersion = 1,
-                groups = data.groups.map(StoredGroup::from),
-                profiles = data.profiles.map { StoredProfile.from(it, rememberPasswords) },
+                schemaVersion = CURRENT_SCHEMA_VERSION,
+                groups = migrated.groups.map(StoredGroup::from),
+                profiles = migrated.profiles.map { StoredProfile.from(it, rememberPasswords) },
             ),
         )
+    }
 
     fun decodeConnections(value: String): StoredConnections {
         val element = json.parseToJsonElement(value)
-        return when (element) {
+        val raw = when (element) {
             is JsonArray -> StoredConnections(
                 profiles = json.decodeFromJsonElement<List<StoredProfile>>(element).map(StoredProfile::toDomain),
             )
@@ -68,7 +72,15 @@ object StoredDataCodec {
             }
             else -> StoredConnections()
         }
+        return migrateConnections(raw)
     }
+
+    private fun migrateConnections(data: StoredConnections): StoredConnections {
+        val (profiles, groups) = SidebarSortMigration.migrate(data.profiles, data.groups)
+        return StoredConnections(groups = groups, profiles = profiles)
+    }
+
+    private const val CURRENT_SCHEMA_VERSION = 2
 }
 
 @Serializable
@@ -82,16 +94,23 @@ private data class StoredConnectionsDocument(
 private data class StoredGroup(
     val id: String,
     val name: String,
-    val order: Int = 0,
+    val sortOrder: Long? = null,
+    /** Legacy v1 field; migrated to [sortOrder] on decode. */
+    val order: Int? = null,
     val expanded: Boolean = true,
 ) {
-    fun toDomain() = ConnectionGroup(id = id, name = name, order = order, expanded = expanded)
+    fun toDomain() = ConnectionGroup(
+        id = id,
+        name = name,
+        sortOrder = sortOrder ?: order?.let { it.toLong() * SidebarOrder.STEP } ?: 0L,
+        expanded = expanded,
+    )
 
     companion object {
         fun from(group: ConnectionGroup) = StoredGroup(
             id = group.id,
             name = group.name,
-            order = group.order,
+            sortOrder = group.sortOrder,
             expanded = group.expanded,
         )
     }
@@ -213,6 +232,7 @@ private data class StoredProfile(
     val ssh: StoredSshOptions = StoredSshOptions(),
     val browser: StoredBrowserOptions = StoredBrowserOptions(),
     val groupId: String? = null,
+    val sortOrder: Long? = null,
 ) {
     fun toDomain() = ConnectionProfile(
         id = id,
@@ -244,6 +264,7 @@ private data class StoredProfile(
         ),
         browser = browser.toDomain(),
         groupId = groupId,
+        sortOrder = sortOrder ?: 0L,
     )
 
     companion object {
@@ -280,6 +301,7 @@ private data class StoredProfile(
             ),
             browser = StoredBrowserOptions.from(profile.browser),
             groupId = profile.groupId,
+            sortOrder = profile.sortOrder,
         )
     }
 }

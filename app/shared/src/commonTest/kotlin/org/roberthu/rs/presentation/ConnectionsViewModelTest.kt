@@ -468,6 +468,16 @@ private class FakeConnectionProfileStore(
             }
         }
     }
+
+    override suspend fun replaceAll(
+        newProfiles: List<ConnectionProfile>,
+        newGroups: List<ConnectionGroup>,
+    ) {
+        profiles.clear()
+        profiles.addAll(newProfiles)
+        groups.clear()
+        groups.addAll(newGroups)
+    }
 }
 
 private class FakeRedisConnectionPort(

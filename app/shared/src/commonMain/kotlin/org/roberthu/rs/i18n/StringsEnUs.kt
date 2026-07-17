@@ -102,6 +102,9 @@ internal object StringsEnUs {
         StringKeys.Connections.ErrorTestFailed to "Connection test failed",
         StringKeys.Connections.ErrorGroupNameEmpty to "Group name must not be empty",
         StringKeys.Connections.ErrorGroupNameDuplicate to "A group with this name already exists",
+        StringKeys.Connections.DragHandle to "Drag to reorder",
+        StringKeys.Connections.MoveToGroup to "Move to this group",
+        StringKeys.Connections.ReorderFailed to "Failed to save sidebar order",
 
         // Connection editor
         StringKeys.ConnectionEditor.TitleNew to "New Connection",

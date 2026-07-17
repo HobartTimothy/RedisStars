@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -42,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
@@ -58,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
 import org.roberthu.rs.domain.DeploymentMode
+import org.roberthu.rs.domain.MoveSidebarItemRequest
 import org.roberthu.rs.i18n.AppI18n
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
@@ -69,18 +69,6 @@ import org.roberthu.rs.theme.toComposeColor
 private sealed interface ConnectionsContextTarget {
     data object Root : ConnectionsContextTarget
     data class Group(val id: String) : ConnectionsContextTarget
-}
-
-private sealed interface ConnectionsTreeEntry {
-    val sortName: String
-
-    data class RootProfile(val profile: ConnectionProfile) : ConnectionsTreeEntry {
-        override val sortName: String = profile.name
-    }
-
-    data class GroupEntry(val group: ConnectionGroup) : ConnectionsTreeEntry {
-        override val sortName: String = group.name
-    }
 }
 
 @Composable
@@ -110,6 +98,7 @@ fun ConnectionsPane(
     onDismissDelete: () -> Unit,
     onDismissError: () -> Unit = {},
     onPickSshPrivateKeyPath: () -> String? = { null },
+    onMoveSidebarItem: (MoveSidebarItemRequest) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var contextMenuExpanded by remember { mutableStateOf(false) }
@@ -127,14 +116,6 @@ fun ConnectionsPane(
         contextMenuOffset = offset
         contextTarget = target
         contextMenuExpanded = true
-    }
-
-    val treeEntries = remember(state.profiles, state.groups) {
-        val ungrouped = state.profiles.filter { it.groupId == null }
-        buildList {
-            ungrouped.forEach { add(ConnectionsTreeEntry.RootProfile(it)) }
-            state.groups.forEach { add(ConnectionsTreeEntry.GroupEntry(it)) }
-        }.sortedBy { it.sortName }
     }
 
     Box(
@@ -179,57 +160,25 @@ fun ConnectionsPane(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                treeEntries.forEach { entry ->
-                    when (entry) {
-                        is ConnectionsTreeEntry.RootProfile -> {
-                            item(key = "root-${entry.profile.id}") {
-                                ConnectionRow(
-                                    profile = entry.profile,
-                                    selected = entry.profile.id == state.selectedProfileId,
-                                    indented = false,
-                                    onSelect = onSelect,
-                                    onConnect = onConnect,
-                                    onTest = onTest,
-                                    onEdit = onEdit,
-                                    onDelete = onDelete,
-                                )
-                            }
-                        }
-                        is ConnectionsTreeEntry.GroupEntry -> {
-                            val group = entry.group
-                            val groupProfiles = state.profiles.filter { it.groupId == group.id }
-                            item(key = "group-header-${group.id}") {
-                                GroupHeaderRow(
-                                    group = group,
-                                    count = groupProfiles.size,
-                                    selected = group.id == state.selectedGroupId,
-                                    onToggle = { onToggleGroupExpanded(group.id) },
-                                    onSelect = { onSelectGroup(group.id) },
-                                    onContextMenu = { offset ->
-                                        openContextMenu(offset, ConnectionsContextTarget.Group(group.id))
-                                    },
-                                    modifier = Modifier.testTag("connections_group_${group.id}"),
-                                )
-                            }
-                            if (group.expanded) {
-                                items(groupProfiles, key = { "group-${group.id}-${it.id}" }) { profile ->
-                                    ConnectionRow(
-                                        profile = profile,
-                                        selected = profile.id == state.selectedProfileId,
-                                        indented = true,
-                                        onSelect = onSelect,
-                                        onConnect = onConnect,
-                                        onTest = onTest,
-                                        onEdit = onEdit,
-                                        onDelete = onDelete,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            ConnectionTree(
+                profiles = state.profiles,
+                groups = state.groups,
+                selectedProfileId = state.selectedProfileId,
+                selectedGroupId = state.selectedGroupId,
+                dragEnabled = state.dragReorderEnabled,
+                onSelect = onSelect,
+                onToggleGroupExpanded = onToggleGroupExpanded,
+                onSelectGroup = onSelectGroup,
+                onConnect = onConnect,
+                onTest = onTest,
+                onEdit = onEdit,
+                onDelete = onDelete,
+                onMoveSidebarItem = onMoveSidebarItem,
+                onOpenGroupContextMenu = { offset, groupId ->
+                    openContextMenu(offset, ConnectionsContextTarget.Group(groupId))
+                },
+                modifier = Modifier.weight(1f),
+            )
         }
 
         DropdownMenu(
@@ -372,24 +321,32 @@ fun ConnectionsPane(
 }
 
 @Composable
-private fun GroupHeaderRow(
+internal fun GroupHeaderRow(
     group: ConnectionGroup,
     count: Int,
     selected: Boolean,
+    dragEnabled: Boolean = false,
+    dragging: Boolean = false,
+    highlightInside: Boolean = false,
     onToggle: () -> Unit,
     onSelect: () -> Unit,
     onContextMenu: (Offset) -> Unit,
+    onDragStart: () -> Unit = {},
+    onDrag: (Offset) -> Unit = {},
+    onDragEnd: () -> Unit = {},
+    onDragCancel: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
+        color = when {
+            highlightInside -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+            selected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+            else -> MaterialTheme.colorScheme.surfaceContainerHigh
         },
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp)
+            .graphicsLayer { alpha = if (dragging) 0.55f else 1f }
             .pointerInput(group.id) {
                 awaitPointerEventScope {
                     while (true) {
@@ -414,6 +371,13 @@ private fun GroupHeaderRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            SidebarDragHandle(
+                enabled = dragEnabled,
+                onDragStart = onDragStart,
+                onDrag = onDrag,
+                onDragEnd = onDragEnd,
+                onDragCancel = onDragCancel,
+            )
             Icon(
                 if (group.expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
                 contentDescription = null,
@@ -429,6 +393,13 @@ private fun GroupHeaderRow(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
+            if (highlightInside) {
+                Text(
+                    t(StringKeys.Connections.MoveToGroup),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             Text(
                 count.toString(),
                 style = MaterialTheme.typography.titleSmall,
@@ -439,15 +410,21 @@ private fun GroupHeaderRow(
 }
 
 @Composable
-private fun ConnectionRow(
+internal fun ConnectionRow(
     profile: ConnectionProfile,
     selected: Boolean,
     indented: Boolean,
+    dragEnabled: Boolean = false,
+    dragging: Boolean = false,
     onSelect: (ConnectionProfile) -> Unit,
     onConnect: (ConnectionProfile) -> Unit,
     onTest: (ConnectionProfile) -> Unit,
     onEdit: (ConnectionProfile) -> Unit,
     onDelete: (ConnectionProfile) -> Unit,
+    onDragStart: () -> Unit = {},
+    onDrag: (Offset) -> Unit = {},
+    onDragEnd: () -> Unit = {},
+    onDragCancel: () -> Unit = {},
 ) {
     val tagColor = profile.browser.tagColor.toComposeColor()
     Surface(
@@ -459,6 +436,7 @@ private fun ConnectionRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = if (indented) 16.dp else 0.dp)
+            .graphicsLayer { alpha = if (dragging) 0.55f else 1f }
             .clickable { onSelect(profile) }
             .testTag("connection_${profile.id}"),
     ) {
@@ -467,6 +445,13 @@ private fun ConnectionRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                SidebarDragHandle(
+                    enabled = dragEnabled,
+                    onDragStart = onDragStart,
+                    onDrag = onDrag,
+                    onDragEnd = onDragEnd,
+                    onDragCancel = onDragCancel,
+                )
                 ConnectionTagIndicator(color = tagColor)
                 Text(profile.name, style = MaterialTheme.typography.labelLarge)
             }

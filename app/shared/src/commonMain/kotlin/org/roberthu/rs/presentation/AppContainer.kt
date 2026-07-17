@@ -2,6 +2,7 @@ package org.roberthu.rs.presentation
 
 import kotlinx.coroutines.CoroutineScope
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.domain.SidebarOrder
 import org.roberthu.rs.domain.ApplicationLogEntry
 import org.roberthu.rs.domain.ApplicationLogLevel
 import kotlinx.coroutines.flow.Flow
@@ -124,8 +125,29 @@ class InMemoryConnectionProfileStore(
 
     override suspend fun deleteGroup(id: String) {
         groups.remove(id)
+        var nextRootOrder = SidebarOrder.nextSortOrder(
+            profiles.values.filter { it.groupId == null }.map { it.sortOrder } +
+                groups.values.map { it.sortOrder },
+        )
         profiles.replaceAll { _, profile ->
-            if (profile.groupId == id) profile.copy(groupId = null) else profile
+            if (profile.groupId == id) {
+                profile.copy(
+                    groupId = null,
+                    sortOrder = nextRootOrder.also { nextRootOrder += SidebarOrder.STEP },
+                )
+            } else {
+                profile
+            }
         }
+    }
+
+    override suspend fun replaceAll(
+        profiles: List<ConnectionProfile>,
+        groups: List<org.roberthu.rs.domain.ConnectionGroup>,
+    ) {
+        this.profiles.clear()
+        this.groups.clear()
+        profiles.forEach { this.profiles[it.id] = it }
+        groups.forEach { this.groups[it.id] = it }
     }
 }

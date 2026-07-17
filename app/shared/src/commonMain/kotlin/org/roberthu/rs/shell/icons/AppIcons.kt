@@ -358,6 +358,41 @@ object AppIcons {
             close()
         }
     }
+
+    val DragHandle: ImageVector by lazy {
+        materialIcon("DragHandle") {
+            moveTo(9.0f, 3.0f)
+            horizontalLineToRelative(2.0f)
+            verticalLineToRelative(2.0f)
+            lineTo(9.0f, 5.0f)
+            close()
+            moveTo(9.0f, 7.0f)
+            horizontalLineToRelative(2.0f)
+            verticalLineToRelative(2.0f)
+            lineTo(9.0f, 9.0f)
+            close()
+            moveTo(9.0f, 11.0f)
+            horizontalLineToRelative(2.0f)
+            verticalLineToRelative(2.0f)
+            lineTo(9.0f, 13.0f)
+            close()
+            moveTo(13.0f, 3.0f)
+            horizontalLineToRelative(2.0f)
+            verticalLineToRelative(2.0f)
+            horizontalLineToRelative(-2.0f)
+            close()
+            moveTo(13.0f, 7.0f)
+            horizontalLineToRelative(2.0f)
+            verticalLineToRelative(2.0f)
+            horizontalLineToRelative(-2.0f)
+            close()
+            moveTo(13.0f, 11.0f)
+            horizontalLineToRelative(2.0f)
+            verticalLineToRelative(2.0f)
+            horizontalLineToRelative(-2.0f)
+            close()
+        }
+    }
 }
 
 private fun materialIcon(

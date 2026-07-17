@@ -161,6 +161,8 @@ data class ConnectionProfile(
     val browser: ConnectionBrowserOptions = ConnectionBrowserOptions(),
     /** When null, the profile is shown under the implicit ungrouped section. */
     val groupId: String? = null,
+    /** Sort position within [groupId] scope, or root scope when [groupId] is null. */
+    val sortOrder: Long = 0L,
 ) {
     fun validate(): List<String> = buildList {
         if (name.isBlank()) {

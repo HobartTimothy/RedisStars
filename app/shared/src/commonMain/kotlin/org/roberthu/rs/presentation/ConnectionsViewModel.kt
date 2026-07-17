@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.roberthu.rs.domain.ConnectionGroup
 import org.roberthu.rs.domain.ConnectionProfile
+import org.roberthu.rs.domain.MoveSidebarItemRequest
+import org.roberthu.rs.domain.SidebarMoveEngine
 import org.roberthu.rs.i18n.AppI18n
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.ValidationI18n
@@ -32,6 +34,7 @@ data class ConnectionsUiState(
     val busy: Boolean = false,
     val error: String? = null,
     val pendingDelete: ConnectionProfile? = null,
+    val dragReorderEnabled: Boolean = true,
 )
 
 class ConnectionsViewModel(
@@ -42,6 +45,8 @@ class ConnectionsViewModel(
     private val manage = ManageConnections(profileStore, connectionPort)
     private val mutableState = MutableStateFlow(ConnectionsUiState())
     val state: StateFlow<ConnectionsUiState> = mutableState.asStateFlow()
+    private var moveGeneration = 0
+    private var pendingReloadAfterMove = false
 
     init {
         scope.launch {
@@ -54,23 +59,101 @@ class ConnectionsViewModel(
 
     fun reload() {
         scope.launch {
-            runCatching {
-                manage.list() to manage.listGroups()
+            if (moveGeneration > 0) {
+                pendingReloadAfterMove = true
+                return@launch
             }
-                .onSuccess { (profiles, groups) ->
-                    mutableState.update {
-                        it.copy(
-                            profiles = profiles.sortedBy(ConnectionProfile::name),
-                            groups = groups,
-                            selectedProfileId = it.selectedProfileId
-                                ?.takeIf { id -> profiles.any { profile -> profile.id == id } },
-                            selectedGroupId = it.selectedGroupId
-                                ?.takeIf { id -> groups.any { group -> group.id == id } },
-                            error = null,
-                        )
+            loadFromStore()
+        }
+    }
+
+    private suspend fun loadFromStore() {
+        runCatching {
+            manage.list() to manage.listGroups()
+        }
+            .onSuccess { (profiles, groups) ->
+                mutableState.update {
+                    it.copy(
+                        profiles = profiles,
+                        groups = groups,
+                        selectedProfileId = it.selectedProfileId
+                            ?.takeIf { id -> profiles.any { profile -> profile.id == id } },
+                        selectedGroupId = it.selectedGroupId
+                            ?.takeIf { id -> groups.any { group -> group.id == id } },
+                        error = null,
+                    )
+                }
+            }
+            .onFailure(::showListError)
+    }
+
+    fun moveSidebarItem(request: MoveSidebarItemRequest) {
+        val snapshot = mutableState.value
+        if (!snapshot.dragReorderEnabled) return
+
+        val optimistic = SidebarMoveEngine.applyMove(
+            snapshot.profiles,
+            snapshot.groups,
+            request,
+        ).getOrElse { error ->
+            mutableState.update {
+                it.copy(error = error.message ?: AppI18n.t(StringKeys.Connections.ReorderFailed))
+            }
+            return
+        }
+        if (optimistic.noOp) return
+
+        val expandGroupId = optimistic.expandGroupId
+        val optimisticGroups = if (expandGroupId != null) {
+            optimistic.groups.map { group ->
+                if (group.id == expandGroupId) group.copy(expanded = true) else group
+            }
+        } else {
+            optimistic.groups
+        }
+        val rollbackProfiles = snapshot.profiles
+        val rollbackGroups = snapshot.groups
+        val generation = ++moveGeneration
+
+        mutableState.update {
+            it.copy(
+                profiles = optimistic.profiles,
+                groups = optimisticGroups,
+                error = null,
+            )
+        }
+
+        scope.launch {
+            try {
+                runCatching { manage.moveSidebarItem(request).getOrThrow() }
+                    .onSuccess { outcome ->
+                        if (generation != moveGeneration) return@onSuccess
+                        mutableState.update { state ->
+                            state.copy(
+                                profiles = outcome.profiles,
+                                groups = outcome.groups,
+                            )
+                        }
+                    }
+                    .onFailure { error ->
+                        if (generation != moveGeneration) return@onFailure
+                        mutableState.update {
+                            it.copy(
+                                profiles = rollbackProfiles,
+                                groups = rollbackGroups,
+                                error = error.message ?: AppI18n.t(StringKeys.Connections.ReorderFailed),
+                            )
+                        }
+                    }
+            } finally {
+                if (generation == moveGeneration) {
+                    moveGeneration = 0
+                    if (pendingReloadAfterMove) {
+                        pendingReloadAfterMove = false
+                        loadFromStore()
                     }
                 }
-                .onFailure(::showListError)
+            }
         }
     }
 
@@ -139,7 +222,6 @@ class ConnectionsViewModel(
         val group = ConnectionGroup(
             id = "group-$suffix",
             name = trimmed,
-            order = mutableState.value.groups.size,
         )
         scope.launch {
             runCatching { manage.createGroup(group).getOrThrow() }
@@ -287,8 +369,7 @@ class ConnectionsViewModel(
                                         } else {
                                             loaded
                                         }
-                                    }
-                                    .sortedBy(ConnectionProfile::name),
+                                    },
                                 groups = groups,
                                 selectedProfileId = profileToSave.id,
                                 editor = null,
@@ -401,7 +482,7 @@ class ConnectionsViewModel(
         val profile = mutableState.value.pendingDelete ?: return
         perform {
             manage.delete(profile.id)
-            val profiles = manage.list().sortedBy(ConnectionProfile::name)
+            val profiles = manage.list()
             mutableState.update {
                 it.copy(
                     profiles = profiles,

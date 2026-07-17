@@ -102,6 +102,9 @@ internal object StringsZhCn {
         StringKeys.Connections.ErrorTestFailed to "连接测试失败",
         StringKeys.Connections.ErrorGroupNameEmpty to "组名称不能为空",
         StringKeys.Connections.ErrorGroupNameDuplicate to "已存在同名分组",
+        StringKeys.Connections.DragHandle to "拖拽以排序",
+        StringKeys.Connections.MoveToGroup to "移动到此分组",
+        StringKeys.Connections.ReorderFailed to "保存侧边栏顺序失败",
 
         // Connection editor
         StringKeys.ConnectionEditor.TitleNew to "新建连接",
