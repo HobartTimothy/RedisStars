@@ -19,3 +19,6 @@ captures
 node_modules/
 .superpowers
 docs/superpowers/
+gradle-compile-out.txt
+baseline-*-build.txt
+*.jfr
