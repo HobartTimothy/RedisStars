@@ -13,5 +13,4 @@ dependencies {
     testImplementation(libs.kotlin.testJunit)
     testImplementation(libs.junit)
     testImplementation(libs.testcontainers)
-    testImplementation(libs.testcontainers.junit4)
 }
