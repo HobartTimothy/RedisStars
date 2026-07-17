@@ -267,7 +267,7 @@ Packaging constraints:
 - Keep the Windows `upgradeUuid` stable across releases.
 - When changing the application version, update all relevant general and platform-specific package version fields consistently.
 - Keep Linux package naming lowercase.
-- Generate icon formats from the canonical logo using `app/desktopApp/icons/generate_icons.py`; do not hand-edit generated binary icons.
+- Generate icon formats from the canonical source `app/desktopApp/icons/source/app-icon-source.png` using `app/desktopApp/icons/generate_icons.py`; do not hand-edit generated binary icons.
 - Preserve default JVM launcher options unless the task explicitly changes memory/runtime policy.
 - After changing packaging or JVM options, run `verifyPackagedJvmOptions`.
 - If jpackage reports missing runtime modules, use `suggestModules`, update the distribution modules deliberately, and verify the packaged app starts.

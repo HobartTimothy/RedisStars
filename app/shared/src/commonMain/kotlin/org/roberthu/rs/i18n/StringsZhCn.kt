@@ -93,6 +93,7 @@ internal object StringsZhCn {
         StringKeys.Connections.Test to "测试",
         StringKeys.Connections.Edit to "编辑",
         StringKeys.Connections.Delete to "删除",
+        StringKeys.Connections.MoreActions to "更多操作",
         StringKeys.Connections.DeleteTitle to "删除连接？",
         StringKeys.Connections.DeleteMessage to "删除「%1\$s」？此操作无法撤销。",
         StringKeys.Connections.SummarySentinel to "哨兵模式 · %1\$s · %2\$d 个节点",

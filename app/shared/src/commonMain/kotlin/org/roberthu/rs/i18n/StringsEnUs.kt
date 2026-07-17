@@ -93,6 +93,7 @@ internal object StringsEnUs {
         StringKeys.Connections.Test to "Test",
         StringKeys.Connections.Edit to "Edit",
         StringKeys.Connections.Delete to "Delete",
+        StringKeys.Connections.MoreActions to "More actions",
         StringKeys.Connections.DeleteTitle to "Delete connection?",
         StringKeys.Connections.DeleteMessage to "Delete \u201c%1\$s\u201d? This cannot be undone.",
         StringKeys.Connections.SummarySentinel to "Sentinel · %1\$s · %2\$d nodes",

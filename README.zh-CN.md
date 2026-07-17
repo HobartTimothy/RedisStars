@@ -90,6 +90,20 @@ UI 开发时可使用热重载：
 
 若打包后运行时出现 `ClassNotFoundException`，请执行 `:app:desktopApp:suggestModules`，并在 `app/desktopApp/build.gradle.kts` 的 `nativeDistributions { modules(...) }` 中添加建议的 JDK 模块。
 
+## 应用图标
+
+各平台安装包图标与 Compose Desktop 窗口图标均由单一 1024×1024 规范源图生成：
+
+`app/desktopApp/icons/source/app-icon-source.png`
+
+```bash
+python -m pip install -r app/desktopApp/icons/requirements.txt
+python app/desktopApp/icons/generate_icons.py
+python app/desktopApp/icons/generate_icons.py --check
+```
+
+请勿手工修改 `icon.ico`、`icon.png`、`icon.icns` 或 `src/main/resources/app-icon.png`。图标变更后，需在各目标操作系统上重新构建原生安装包。详见 [app/desktopApp/icons/README.md](./app/desktopApp/icons/README.md)。
+
 ## JVM 运行参数
 
 打包后的 RedisStars 通过 jpackage 原生启动器配置文件 **`RedisStars.cfg`** 读取 JVM 启动参数。原生启动器在 JVM 创建**之前**应用这些选项 — 堆大小、GC 等 `-X`/`-XX` 参数无法在应用代码中修改。

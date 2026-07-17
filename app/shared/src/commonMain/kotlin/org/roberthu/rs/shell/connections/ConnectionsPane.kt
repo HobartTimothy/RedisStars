@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
@@ -427,6 +428,7 @@ internal fun ConnectionRow(
     onDragCancel: () -> Unit = {},
 ) {
     val tagColor = profile.browser.tagColor.toComposeColor()
+    var actionsMenuExpanded by remember(profile.id) { mutableStateOf(false) }
     Surface(
         color = if (selected) {
             MaterialTheme.colorScheme.secondaryContainer
@@ -437,10 +439,22 @@ internal fun ConnectionRow(
             .fillMaxWidth()
             .padding(start = if (indented) 16.dp else 0.dp)
             .graphicsLayer { alpha = if (dragging) 0.55f else 1f }
+            .pointerInput(profile.id) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                            val change = event.changes.firstOrNull() ?: continue
+                            actionsMenuExpanded = true
+                            change.consume()
+                        }
+                    }
+                }
+            }
             .clickable { onSelect(profile) }
             .testTag("connection_${profile.id}"),
     ) {
-        Column(Modifier.padding(10.dp)) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -453,24 +467,69 @@ internal fun ConnectionRow(
                     onDragCancel = onDragCancel,
                 )
                 ConnectionTagIndicator(color = tagColor)
-                Text(profile.name, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    profile.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                Box {
+                    IconButton(
+                        onClick = { actionsMenuExpanded = true },
+                        modifier = Modifier
+                            .size(28.dp)
+                            .testTag("connection_menu_${profile.id}"),
+                    ) {
+                        Icon(
+                            AppIcons.MoreVert,
+                            contentDescription = t(StringKeys.Connections.MoreActions),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = actionsMenuExpanded,
+                        onDismissRequest = { actionsMenuExpanded = false },
+                        modifier = Modifier.testTag("connection_actions_menu_${profile.id}"),
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(t(StringKeys.Connections.Connect)) },
+                            onClick = {
+                                actionsMenuExpanded = false
+                                onConnect(profile)
+                            },
+                            modifier = Modifier.testTag("connection_connect_${profile.id}"),
+                        )
+                        DropdownMenuItem(
+                            text = { Text(t(StringKeys.Connections.Test)) },
+                            onClick = {
+                                actionsMenuExpanded = false
+                                onTest(profile)
+                            },
+                            modifier = Modifier.testTag("connection_test_${profile.id}"),
+                        )
+                        DropdownMenuItem(
+                            text = { Text(t(StringKeys.Connections.Edit)) },
+                            onClick = {
+                                actionsMenuExpanded = false
+                                onEdit(profile)
+                            },
+                            modifier = Modifier.testTag("connection_edit_${profile.id}"),
+                        )
+                        DropdownMenuItem(
+                            text = { Text(t(StringKeys.Connections.Delete)) },
+                            onClick = {
+                                actionsMenuExpanded = false
+                                onDelete(profile)
+                            },
+                            modifier = Modifier.testTag("connection_delete_${profile.id}"),
+                        )
+                    }
+                }
             }
             Text(
                 connectionSummary(profile),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (selected) {
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    TextButton(onClick = { onConnect(profile) }) { Text(t(StringKeys.Connections.Connect)) }
-                    TextButton(onClick = { onTest(profile) }) { Text(t(StringKeys.Connections.Test)) }
-                    TextButton(
-                        onClick = { onEdit(profile) },
-                        modifier = Modifier.testTag("connection_edit_${profile.id}"),
-                    ) { Text(t(StringKeys.Connections.Edit)) }
-                    TextButton(onClick = { onDelete(profile) }) { Text(t(StringKeys.Connections.Delete)) }
-                }
-            }
         }
     }
 }

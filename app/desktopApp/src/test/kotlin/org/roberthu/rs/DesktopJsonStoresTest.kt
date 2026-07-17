@@ -26,6 +26,7 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class DesktopJsonStoresTest {
+
     @Test
     fun settingsLoadCachesSubsequentReads() = runBlocking {
         val file = tempFile("settings.json")

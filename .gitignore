@@ -22,3 +22,8 @@ docs/superpowers/
 gradle-compile-out.txt
 baseline-*-build.txt
 *.jfr
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+gradle/

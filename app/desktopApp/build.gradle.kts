@@ -8,6 +8,7 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.Exec
 import java.nio.file.Files
 import kotlin.io.path.isDirectory
 import kotlin.io.path.name
@@ -121,7 +122,7 @@ compose.desktop {
             vendor = "RobertHU"
             copyright = "© 2026 RobertHU. All rights reserved."
 
-            // Derived from src/main/resources/logo.png via icons/generate_icons.py
+            // Derived from icons/source/app-icon-source.png via icons/generate_icons.py
             windows {
                 iconFile.set(project.file("icons/icon.ico"))
                 menuGroup = "RedisStars"
@@ -161,4 +162,17 @@ tasks.register<VerifyPackagedJvmOptionsTask>("verifyPackagedJvmOptions") {
     distributableAppDir.set(layout.buildDirectory.dir("compose/binaries/main/app"))
     expectedJvmArgs.set(redisStarsJvmArgs)
     launcherName.set(rootProject.name)
+}
+
+tasks.register<Exec>("verifyApplicationIcons") {
+    group = "verification"
+    description =
+        "Validates packaged and runtime icon assets via icons/generate_icons.py --check. " +
+            "Requires Python on PATH; not wired into compileKotlin."
+    workingDir = project.projectDir
+    commandLine(
+        "python",
+        "icons/generate_icons.py",
+        "--check",
+    )
 }

@@ -90,6 +90,20 @@ Packaged output is written to `app/desktopApp/build/compose/binaries/`.
 
 If a packaged app fails at runtime with `ClassNotFoundException`, run `:app:desktopApp:suggestModules` and add the suggested JDK modules under `nativeDistributions { modules(...) }` in `app/desktopApp/build.gradle.kts`.
 
+## Application icons
+
+Platform installers and the Compose Desktop window icon are generated from a single 1024×1024 source:
+
+`app/desktopApp/icons/source/app-icon-source.png`
+
+```bash
+python -m pip install -r app/desktopApp/icons/requirements.txt
+python app/desktopApp/icons/generate_icons.py
+python app/desktopApp/icons/generate_icons.py --check
+```
+
+Do not hand-edit `icon.ico`, `icon.png`, `icon.icns`, or `src/main/resources/app-icon.png`. After changing icons, rebuild native packages on each target OS. See [app/desktopApp/icons/README.md](./app/desktopApp/icons/README.md).
+
 ## JVM runtime options
 
 Packaged RedisStars reads JVM startup flags from the jpackage launcher config file **`RedisStars.cfg`**. The native launcher applies these options **before** the JVM starts — heap size, GC, and other `-X`/`-XX` flags cannot be changed from application code.

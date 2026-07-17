@@ -1,0 +1,4 @@
+# Icon generation only — not a JVM runtime dependency.
+# Prefer a Python version with prebuilt Pillow wheels (3.10–3.13 recommended).
+Pillow>=10.0.0
+icnsutil>=1.1.0,<2

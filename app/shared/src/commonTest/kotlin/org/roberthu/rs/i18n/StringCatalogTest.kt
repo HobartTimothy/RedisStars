@@ -190,6 +190,7 @@ class StringCatalogTest {
             StringKeys.Connections.Test,
             StringKeys.Connections.Edit,
             StringKeys.Connections.Delete,
+            StringKeys.Connections.MoreActions,
             StringKeys.Connections.DeleteTitle,
             StringKeys.Connections.DeleteMessage,
             StringKeys.Connections.SummarySentinel,

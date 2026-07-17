@@ -103,6 +103,7 @@ object StringKeys {
         const val Test = "connections.test"
         const val Edit = "connections.edit"
         const val Delete = "connections.delete"
+        const val MoreActions = "connections.more_actions"
         const val DeleteTitle = "connections.delete_title"
         const val DeleteMessage = "connections.delete_message"
         const val SummarySentinel = "connections.summary_sentinel"
