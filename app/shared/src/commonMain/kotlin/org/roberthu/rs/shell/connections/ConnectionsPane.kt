@@ -359,7 +359,15 @@ internal fun GroupHeaderRow(
                         }
                     }
                 }
-            },
+            }
+            .sidebarLongPressDrag(
+                enabled = dragEnabled,
+                dragKey = group.id,
+                onDragStart = onDragStart,
+                onDrag = onDrag,
+                onDragEnd = onDragEnd,
+                onDragCancel = onDragCancel,
+            ),
     ) {
         Row(
             modifier = Modifier
@@ -372,13 +380,6 @@ internal fun GroupHeaderRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SidebarDragHandle(
-                enabled = dragEnabled,
-                onDragStart = onDragStart,
-                onDrag = onDrag,
-                onDragEnd = onDragEnd,
-                onDragCancel = onDragCancel,
-            )
             Icon(
                 if (group.expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
                 contentDescription = null,
@@ -451,6 +452,14 @@ internal fun ConnectionRow(
                     }
                 }
             }
+            .sidebarLongPressDrag(
+                enabled = dragEnabled,
+                dragKey = profile.id,
+                onDragStart = onDragStart,
+                onDrag = onDrag,
+                onDragEnd = onDragEnd,
+                onDragCancel = onDragCancel,
+            )
             .clickable { onSelect(profile) }
             .testTag("connection_${profile.id}"),
     ) {
@@ -459,13 +468,6 @@ internal fun ConnectionRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                SidebarDragHandle(
-                    enabled = dragEnabled,
-                    onDragStart = onDragStart,
-                    onDrag = onDrag,
-                    onDragEnd = onDragEnd,
-                    onDragCancel = onDragCancel,
-                )
                 ConnectionTagIndicator(color = tagColor)
                 Text(
                     profile.name,

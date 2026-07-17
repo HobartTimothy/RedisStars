@@ -1,7 +1,7 @@
 package org.roberthu.rs.shell.connections
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -492,38 +493,39 @@ private fun BoxScope.DropIndicatorLine(zone: SidebarDropZone?) {
     )
 }
 
-@Composable
-internal fun SidebarDragHandle(
+/**
+ * Enables drag-to-reorder on a whole sidebar row after a long press, so the sidebar no
+ * longer needs a dedicated drag handle. Drag positions are reported in root coordinates
+ * so the caller can resolve drop targets against the shared layout registry.
+ */
+internal fun Modifier.sidebarLongPressDrag(
     enabled: Boolean,
+    dragKey: Any?,
     onDragStart: () -> Unit,
     onDrag: (Offset) -> Unit,
     onDragEnd: () -> Unit,
     onDragCancel: () -> Unit,
-) {
-    if (!enabled) return
+): Modifier = composed {
+    if (!enabled) {
+        return@composed this
+    }
     val coordinatesHolder = remember { LayoutCoordinatesHolder() }
-    androidx.compose.material3.Icon(
-        org.roberthu.rs.shell.icons.AppIcons.DragHandle,
-        contentDescription = t(StringKeys.Connections.DragHandle),
-        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
-            .padding(end = 4.dp)
-            .onGloballyPositioned { coordinatesHolder.coordinates = it }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { onDragStart() },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        val rootPosition = coordinatesHolder.coordinates
-                            ?.localToRoot(change.position)
-                            ?: change.position
-                        onDrag(rootPosition)
-                    },
-                    onDragEnd = { onDragEnd() },
-                    onDragCancel = { onDragCancel() },
-                )
-            },
-    )
+    this
+        .onGloballyPositioned { coordinatesHolder.coordinates = it }
+        .pointerInput(dragKey) {
+            detectDragGesturesAfterLongPress(
+                onDragStart = { onDragStart() },
+                onDrag = { change, _ ->
+                    change.consume()
+                    val rootPosition = coordinatesHolder.coordinates
+                        ?.localToRoot(change.position)
+                        ?: change.position
+                    onDrag(rootPosition)
+                },
+                onDragEnd = { onDragEnd() },
+                onDragCancel = { onDragCancel() },
+            )
+        }
 }
 
 private class LayoutCoordinatesHolder {
