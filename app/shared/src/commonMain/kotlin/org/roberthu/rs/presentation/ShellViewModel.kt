@@ -39,6 +39,7 @@ class ShellViewModel(
                             darkMode = loaded.darkMode,
                             autoConnect = loaded.autoConnect,
                             language = language,
+                            railCollapsed = loaded.railCollapsed ?: false,
                             bannerError = null,
                         )
                     }
@@ -53,8 +54,11 @@ class ShellViewModel(
                 it.copy(destination = action.destination)
             }
 
-            ShellUiAction.ToggleRail -> mutableState.update {
-                it.copy(railCollapsed = !it.railCollapsed)
+            ShellUiAction.ToggleRail -> {
+                val collapsed = !mutableState.value.railCollapsed
+                settings = settings.copy(railCollapsed = collapsed)
+                mutableState.update { it.copy(railCollapsed = collapsed) }
+                persistSettings()
             }
 
             is ShellUiAction.SetDarkMode -> {

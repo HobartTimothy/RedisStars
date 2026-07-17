@@ -39,6 +39,68 @@ class ShellViewModelTest {
     }
 
     @Test
+    fun toggleRail_persistsCollapsedState() = runTest {
+        val store = FakeUserSettingsStore()
+        val viewModel = ShellViewModel(store, this)
+        advanceUntilIdle()
+
+        viewModel.dispatch(ShellUiAction.ToggleRail)
+        advanceUntilIdle()
+
+        assertTrue(store.savedSettings?.railCollapsed == true)
+    }
+
+    @Test
+    fun toggleRail_persistsExpandedStateOnSecondToggle() = runTest {
+        val store = FakeUserSettingsStore()
+        val viewModel = ShellViewModel(store, this)
+        advanceUntilIdle()
+
+        viewModel.dispatch(ShellUiAction.ToggleRail)
+        viewModel.dispatch(ShellUiAction.ToggleRail)
+        advanceUntilIdle()
+
+        assertEquals(false, store.savedSettings?.railCollapsed)
+    }
+
+    @Test
+    fun load_withStoredRailCollapsed_restoresCollapsedState() = runTest {
+        val store = FakeUserSettingsStore(UserSettings(railCollapsed = true))
+        val viewModel = ShellViewModel(store, this)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.railCollapsed)
+    }
+
+    @Test
+    fun load_withStoredRailExpanded_restoresExpandedState() = runTest {
+        val store = FakeUserSettingsStore(UserSettings(railCollapsed = false))
+        val viewModel = ShellViewModel(store, this)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.railCollapsed)
+    }
+
+    @Test
+    fun load_withNullRailCollapsed_defaultsToExpanded() = runTest {
+        val store = FakeUserSettingsStore(UserSettings(railCollapsed = null))
+        val viewModel = ShellViewModel(store, this)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.railCollapsed)
+    }
+
+    @Test
+    fun toggleRail_doesNotChangeCurrentDestination() = runTest {
+        val viewModel = ShellViewModel(FakeUserSettingsStore(), this)
+        viewModel.dispatch(ShellUiAction.Navigate(ShellDestination.Monitor))
+
+        viewModel.dispatch(ShellUiAction.ToggleRail)
+
+        assertEquals(ShellDestination.Monitor, viewModel.state.value.destination)
+    }
+
+    @Test
     fun setDarkMode_persistsUpdatedSettings() = runTest {
         val store = FakeUserSettingsStore(UserSettings(darkMode = true, autoConnect = true))
         val viewModel = ShellViewModel(store, this)

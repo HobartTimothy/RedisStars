@@ -39,6 +39,11 @@ data class UserSettings(
      * `null` means the user has not chosen yet — resolve from the system language on load.
      */
     val language: String? = null,
+    /**
+     * Whether the left navigation rail is collapsed.
+     * `null` means never explicitly set — the UI defaults to expanded.
+     */
+    val railCollapsed: Boolean? = null,
 )
 
 interface UserSettingsStore {

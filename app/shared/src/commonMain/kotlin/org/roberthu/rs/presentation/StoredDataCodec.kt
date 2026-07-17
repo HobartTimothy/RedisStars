@@ -125,6 +125,8 @@ private data class StoredSettings(
     val remoteBaseUrl: String = "http://127.0.0.1:8080",
     /** Canonical tag (`zh-CN` / `en-US`), or omitted/null for legacy configs. */
     val language: String? = null,
+    /** Whether the navigation rail is collapsed; omitted/null means "not yet set" (defaults to expanded). */
+    val railCollapsed: Boolean? = null,
 ) {
     fun toDomain() = UserSettings(
         darkMode = darkMode,
@@ -133,16 +135,18 @@ private data class StoredSettings(
         rememberPasswords = rememberPasswords,
         remoteBaseUrl = remoteBaseUrl,
         language = language,
+        railCollapsed = railCollapsed,
     )
 
     companion object {
         fun from(settings: UserSettings) = StoredSettings(
-            settings.darkMode,
-            settings.autoConnect,
-            settings.recentConnectionId,
-            settings.rememberPasswords,
-            settings.remoteBaseUrl,
-            settings.language,
+            darkMode = settings.darkMode,
+            autoConnect = settings.autoConnect,
+            recentConnectionId = settings.recentConnectionId,
+            rememberPasswords = settings.rememberPasswords,
+            remoteBaseUrl = settings.remoteBaseUrl,
+            language = settings.language,
+            railCollapsed = settings.railCollapsed,
         )
     }
 }

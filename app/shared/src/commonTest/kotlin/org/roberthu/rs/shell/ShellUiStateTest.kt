@@ -37,6 +37,11 @@ class ShellUiStateTest {
     }
 
     @Test
+    fun expandedWidth_isWiderThanCollapsed() {
+        assertTrue(ShellRailDefaults.ExpandedWidth > ShellRailDefaults.CollapsedWidth)
+    }
+
+    @Test
     fun shouldUsePinnedLeftRail_onlyForNavigationRail() {
         assertTrue(shouldUsePinnedLeftRail(NavigationSuiteType.NavigationRail))
         assertFalse(shouldUsePinnedLeftRail(NavigationSuiteType.NavigationBar))

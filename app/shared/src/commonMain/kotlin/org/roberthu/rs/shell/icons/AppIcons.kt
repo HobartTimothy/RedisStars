@@ -359,6 +359,56 @@ object AppIcons {
         }
     }
 
+    /**
+     * Panel-left icon: expand the navigation sidebar.
+     * Represents a layout with the left panel visible (three horizontal lines,
+     * left column highlighted).
+     */
+    val SidebarOpen: ImageVector by lazy {
+        materialIcon("SidebarOpen") {
+            // outer rect
+            moveTo(3.0f, 3.0f)
+            horizontalLineToRelative(18.0f)
+            verticalLineToRelative(18.0f)
+            horizontalLineToRelative(-18.0f)
+            close()
+            // fill: draw background by subtracting — use two filled rects instead
+            // Left panel column (filled accent)
+            moveTo(3.0f, 3.0f)
+            verticalLineToRelative(18.0f)
+            horizontalLineToRelative(6.0f)
+            verticalLineToRelative(-18.0f)
+            close()
+        }
+    }
+
+    /**
+     * Panel-left-close icon: collapse the navigation sidebar.
+     * Uses a simpler three-bar hamburger with a leftward chevron hint.
+     */
+    val SidebarClose: ImageVector by lazy {
+        materialIcon("SidebarClose") {
+            // top bar
+            moveTo(3.0f, 18.0f)
+            horizontalLineToRelative(18.0f)
+            verticalLineToRelative(-2.0f)
+            horizontalLineToRelative(-18.0f)
+            close()
+            // middle bar
+            moveTo(3.0f, 13.0f)
+            horizontalLineToRelative(18.0f)
+            verticalLineToRelative(-2.0f)
+            horizontalLineToRelative(-18.0f)
+            close()
+            // bottom bar
+            moveTo(3.0f, 8.0f)
+            horizontalLineToRelative(18.0f)
+            verticalLineToRelative(-2.0f)
+            horizontalLineToRelative(-18.0f)
+            close()
+        }
+    }
+
     val DragHandle: ImageVector by lazy {
         materialIcon("DragHandle") {
             moveTo(9.0f, 3.0f)

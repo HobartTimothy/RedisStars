@@ -33,8 +33,8 @@ sealed interface ShellUiAction {
 }
 
 object ShellRailDefaults {
-    val ExpandedWidth: Dp = 88.dp
-    val CollapsedWidth: Dp = 56.dp
+    val ExpandedWidth: Dp = 208.dp
+    val CollapsedWidth: Dp = 68.dp
 
     fun width(collapsed: Boolean): Dp =
         if (collapsed) CollapsedWidth else ExpandedWidth

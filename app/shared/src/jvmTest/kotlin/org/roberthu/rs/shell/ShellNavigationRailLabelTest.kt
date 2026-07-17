@@ -1,7 +1,9 @@
 package org.roberthu.rs.shell
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
@@ -99,6 +101,102 @@ class ShellNavigationRailLabelTest {
         waitForIdle()
         onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Settings)).assertIsDisplayed()
         onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Connections)).assertIsDisplayed()
+    }
+}
+
+    @Test
+    fun whenCollapsed_labelsAreNotRenderedAsText() = runComposeUiTest {
+        setContent {
+            ProvideAppLanguage(AppLanguage.ZhCN) {
+                RedisTheme(darkTheme = true) {
+                    ShellNavigationRail(
+                        destination = ShellDestination.Connections,
+                        railCollapsed = true,
+                        onDestinationSelected = {},
+                        onToggleCollapsed = {},
+                    )
+                }
+            }
+        }
+        waitForIdle()
+        onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Connections)).assertDoesNotExist()
+        onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Monitor)).assertDoesNotExist()
+        onNodeWithText(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.RuntimeLogs)).assertDoesNotExist()
+    }
+
+    @Test
+    fun whenCollapsed_menuItemsHaveAccessibleContentDescription() = runComposeUiTest {
+        setContent {
+            ProvideAppLanguage(AppLanguage.ZhCN) {
+                RedisTheme(darkTheme = true) {
+                    ShellNavigationRail(
+                        destination = ShellDestination.Connections,
+                        railCollapsed = true,
+                        onDestinationSelected = {},
+                        onToggleCollapsed = {},
+                    )
+                }
+            }
+        }
+        waitForIdle()
+        onNodeWithContentDescription(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Connections)).assertExists()
+        onNodeWithContentDescription(StringCatalog.t(AppLanguage.ZhCN, StringKeys.Nav.Settings)).assertExists()
+    }
+
+    @Test
+    fun whenExpanded_toggleButtonHasCollapseDescription() = runComposeUiTest {
+        setContent {
+            ProvideAppLanguage(AppLanguage.EnUS) {
+                RedisTheme(darkTheme = true) {
+                    ShellNavigationRail(
+                        destination = ShellDestination.Connections,
+                        railCollapsed = false,
+                        onDestinationSelected = {},
+                        onToggleCollapsed = {},
+                    )
+                }
+            }
+        }
+        waitForIdle()
+        onNodeWithTag("sidebar_toggle")
+            .assertContentDescriptionEquals(StringCatalog.t(AppLanguage.EnUS, StringKeys.Nav.CollapseRail))
+    }
+
+    @Test
+    fun whenCollapsed_toggleButtonHasExpandDescription() = runComposeUiTest {
+        setContent {
+            ProvideAppLanguage(AppLanguage.EnUS) {
+                RedisTheme(darkTheme = true) {
+                    ShellNavigationRail(
+                        destination = ShellDestination.Connections,
+                        railCollapsed = true,
+                        onDestinationSelected = {},
+                        onToggleCollapsed = {},
+                    )
+                }
+            }
+        }
+        waitForIdle()
+        onNodeWithTag("sidebar_toggle")
+            .assertContentDescriptionEquals(StringCatalog.t(AppLanguage.EnUS, StringKeys.Nav.ExpandRail))
+    }
+
+    @Test
+    fun settingsItem_alwaysPresent_inCollapsedState() = runComposeUiTest {
+        setContent {
+            ProvideAppLanguage(AppLanguage.ZhCN) {
+                RedisTheme(darkTheme = true) {
+                    ShellNavigationRail(
+                        destination = ShellDestination.Connections,
+                        railCollapsed = true,
+                        onDestinationSelected = {},
+                        onToggleCollapsed = {},
+                    )
+                }
+            }
+        }
+        waitForIdle()
+        onNodeWithTag("settings_menu_item").assertExists()
     }
 }
 
