@@ -2,6 +2,12 @@ package org.roberthu.rs.redis
 
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.roberthu.rs.domain.RedisError
@@ -26,29 +32,31 @@ internal sealed interface ClusterNodeScanResult {
 
 internal class ClusterKeyScanner(
     private val connection: StatefulRedisClusterConnection<String, String>,
+    private val maxParallelMasters: Int = DEFAULT_MAX_PARALLEL_MASTERS,
 ) {
-    fun scan(query: ScanQuery): ScanPage {
+    suspend fun scan(query: ScanQuery): ScanPage {
         val masters = connection.partitions
             .filter { it.`is`(RedisClusterNode.NodeFlag.UPSTREAM) }
             .associateBy { it.nodeId }
-        val previousCursors = query.cursorToken
-            ?.let(::decodeToken)
-            ?: masters.keys.sorted().associateWithTo(linkedMapOf()) { "0" }
+        val previousCursors = reconcileCursors(query.cursorToken, masters.keys)
 
-        val results = previousCursors.map { (nodeId, cursor) ->
+        val results = scanMastersParallel(previousCursors, maxParallelMasters) { nodeId, cursor ->
             val node = masters[nodeId]
             if (node == null) {
-                ClusterNodeScanResult.Failure(nodeId, "master is no longer in the cluster topology")
+                ClusterNodeScanResult.Failure(nodeId, TOPOLOGY_REMOVED_REASON)
             } else {
                 try {
-                    val commands = connection.getConnection(nodeId).sync()
+                    val nodeConnection = connection.getConnection(nodeId)
+                    val commands = nodeConnection.sync()
                     ClusterNodeScanResult.Success(
                         nodeId,
                         scanPage(
-                            LettuceScanCommands(commands),
+                            LettuceScanCommands.fromNodeConnection(nodeConnection, commands),
                             query.copy(cursorToken = cursor),
                         ),
                     )
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
                 } catch (failure: Throwable) {
                     val error = LettuceExceptionMapper.map(failure)
                     ClusterNodeScanResult.Failure(nodeId, "${error.code}: ${error.message}")
@@ -59,9 +67,37 @@ internal class ClusterKeyScanner(
     }
 
     companion object {
+        internal const val DEFAULT_MAX_PARALLEL_MASTERS = 8
+        internal const val TOPOLOGY_REMOVED_REASON = "master is no longer in the cluster topology"
+
         private val json = Json {
             allowStructuredMapKeys = false
             ignoreUnknownKeys = false
+        }
+
+        fun reconcileCursors(
+            cursorToken: String?,
+            masterNodeIds: Collection<String>,
+        ): LinkedHashMap<String, String> {
+            val decoded = cursorToken?.let(::decodeToken)
+            return masterNodeIds.sorted().associateWithTo(linkedMapOf()) { nodeId ->
+                decoded?.get(nodeId) ?: "0"
+            }
+        }
+
+        suspend fun scanMastersParallel(
+            previousCursors: Map<String, String>,
+            maxParallelMasters: Int,
+            scanNode: suspend (nodeId: String, cursor: String) -> ClusterNodeScanResult,
+        ): List<ClusterNodeScanResult> = coroutineScope {
+            val semaphore = Semaphore(maxParallelMasters.coerceAtLeast(1))
+            previousCursors.map { (nodeId, cursor) ->
+                async {
+                    semaphore.withPermit {
+                        scanNode(nodeId, cursor)
+                    }
+                }
+            }.awaitAll()
         }
 
         fun merge(
@@ -83,7 +119,9 @@ internal class ClusterKeyScanner(
                     }
 
                     is ClusterNodeScanResult.Failure -> {
-                        previousCursors[result.nodeId]?.let { nextCursors[result.nodeId] = it }
+                        if (result.reason != TOPOLOGY_REMOVED_REASON) {
+                            previousCursors[result.nodeId]?.let { nextCursors[result.nodeId] = it }
+                        }
                         partialFailures += "${result.nodeId}: ${result.reason}"
                     }
                 }
