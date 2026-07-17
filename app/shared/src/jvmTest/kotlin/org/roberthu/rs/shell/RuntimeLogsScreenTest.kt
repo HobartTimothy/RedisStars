@@ -15,6 +15,7 @@ import org.roberthu.rs.i18n.StringCatalog
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.presentation.RuntimeLogsUiState
+import org.roberthu.rs.presentation.filterRuntimeLogEntries
 import org.roberthu.rs.shell.runtimelogs.RuntimeLogsScreen
 import org.roberthu.rs.theme.RedisTheme
 
@@ -78,6 +79,7 @@ class RuntimeLogsScreenTest {
                     RuntimeLogsScreen(
                         state = RuntimeLogsUiState(
                             entries = entries,
+                            filteredEntries = filterRuntimeLogEntries(entries, levelFilter, ""),
                             levelFilter = levelFilter,
                             loading = false,
                         ),
@@ -105,6 +107,11 @@ class RuntimeLogsScreenTest {
                     RuntimeLogsScreen(
                         state = RuntimeLogsUiState(
                             entries = entries,
+                            filteredEntries = filterRuntimeLogEntries(
+                                entries,
+                                ApplicationLogLevel.ERROR,
+                                "",
+                            ),
                             levelFilter = ApplicationLogLevel.ERROR,
                             loading = false,
                         ),

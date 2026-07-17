@@ -1,8 +1,11 @@
 package org.roberthu.rs.presentation
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.roberthu.rs.domain.ApplicationLogEntry
@@ -32,6 +35,7 @@ class RuntimeLogsViewModelTest {
 
         viewModel.setLevelFilter(null)
         viewModel.setSearchQuery("boot")
+        advanceUntilIdle()
         assertEquals(1, viewModel.state.value.filteredEntries.size)
         assertEquals("started", viewModel.state.value.filteredEntries.single().message)
         viewModel.dispose()
@@ -106,6 +110,89 @@ class RuntimeLogsViewModelTest {
         viewModel.dispose()
     }
 
+    @Test
+    fun appendStress_keepsOnlyMostRecentMaxEntries() = runTest {
+        val port = HighCapacityApplicationLogPort()
+        val maxEntries = 10_000
+        val viewModel = RuntimeLogsViewModel(port, this, maxEntries = maxEntries)
+        advanceUntilIdle()
+
+        repeat(maxEntries + 500) { index ->
+            port.emit(entry("entry-$index", ApplicationLogLevel.INFO, "app", "message-$index"))
+        }
+        advanceUntilIdle()
+
+        assertEquals(maxEntries, viewModel.state.value.entries.size)
+        assertEquals("message-${maxEntries + 499}", viewModel.state.value.entries.last().message)
+        assertEquals("message-500", viewModel.state.value.entries.first().message)
+        viewModel.dispose()
+    }
+
+    @Test
+    fun pausedQueue_isCappedAtMaxEntries() = runTest {
+        val port = HighCapacityApplicationLogPort()
+        val maxEntries = 100
+        val viewModel = RuntimeLogsViewModel(port, this, maxEntries = maxEntries)
+        advanceUntilIdle()
+
+        viewModel.setPaused(true)
+        repeat(maxEntries + 50) { index ->
+            port.emit(entry("paused-$index", ApplicationLogLevel.INFO, "app", "paused-message-$index"))
+        }
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.entries.isEmpty())
+
+        viewModel.setPaused(false)
+        advanceUntilIdle()
+
+        assertEquals(maxEntries, viewModel.state.value.entries.size)
+        assertEquals("paused-message-${maxEntries + 49}", viewModel.state.value.entries.last().message)
+        assertEquals("paused-message-50", viewModel.state.value.entries.first().message)
+        viewModel.dispose()
+    }
+
+    @Test
+    fun searchQuery_isDebouncedBeforeFiltering() = runTest {
+        val port = InMemoryApplicationLogPort(
+            initialEntries = listOf(
+                entry("1", ApplicationLogLevel.INFO, "boot", "started"),
+                entry("2", ApplicationLogLevel.ERROR, "redis", "connection failed"),
+            ),
+        )
+        val viewModel = RuntimeLogsViewModel(port, this)
+        advanceUntilIdle()
+
+        viewModel.setSearchQuery("boot")
+        assertEquals(2, viewModel.state.value.filteredEntries.size)
+
+        advanceTimeBy(200)
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.state.value.filteredEntries.size)
+        assertEquals("started", viewModel.state.value.filteredEntries.single().message)
+        viewModel.dispose()
+    }
+
+    @Test
+    fun filterRuntimeLogEntries_matchesViewModelFiltering() = runTest {
+        val entries = listOf(
+            entry("1", ApplicationLogLevel.INFO, "boot", "started"),
+            entry("2", ApplicationLogLevel.ERROR, "redis", "connection failed"),
+        )
+        val expected = filterRuntimeLogEntries(entries, ApplicationLogLevel.ERROR, "conn")
+
+        val port = InMemoryApplicationLogPort(initialEntries = entries)
+        val viewModel = RuntimeLogsViewModel(port, this)
+        advanceUntilIdle()
+
+        viewModel.setLevelFilter(ApplicationLogLevel.ERROR)
+        viewModel.setSearchQuery("conn")
+        advanceUntilIdle()
+
+        assertEquals(expected, viewModel.state.value.filteredEntries)
+        viewModel.dispose()
+    }
+
     private fun entry(
         id: String,
         level: ApplicationLogLevel,
@@ -139,4 +226,22 @@ private class RecordingExportApplicationLogPort : InMemoryApplicationLogPort() {
         lastExported = entries
         return Result.success(Unit)
     }
+}
+
+private class HighCapacityApplicationLogPort : ApplicationLogPort {
+    private val entries = mutableListOf<ApplicationLogEntry>()
+    private val events = Channel<ApplicationLogEntry>(Channel.UNLIMITED)
+
+    fun emit(entry: ApplicationLogEntry) {
+        entries.add(entry)
+        events.trySend(entry)
+    }
+
+    override suspend fun loadRecent(maxEntries: Int): Result<List<ApplicationLogEntry>> =
+        Result.success(entries.takeLast(maxEntries))
+
+    override fun watch(): Flow<ApplicationLogEntry> = events.receiveAsFlow()
+
+    override suspend fun export(entries: List<ApplicationLogEntry>, targetPath: String): Result<Unit> =
+        Result.success(Unit)
 }
