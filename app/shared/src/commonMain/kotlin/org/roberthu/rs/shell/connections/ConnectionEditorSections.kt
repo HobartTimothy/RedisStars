@@ -14,9 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import org.roberthu.rs.shell.icons.AppIcons
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -216,9 +214,9 @@ fun GeneralConnectionSection(
                 ) {
                     Icon(
                         imageVector = if (passwordVisible) {
-                            Icons.Filled.VisibilityOff
+                            AppIcons.VisibilityOff
                         } else {
-                            Icons.Filled.Visibility
+                            AppIcons.Visibility
                         },
                         contentDescription = if (passwordVisible) {
                             t(StringKeys.ConnectionEditor.HidePassword)
@@ -367,9 +365,9 @@ private fun SshTunnelSection(
                     IconButton(onClick = { sshPasswordVisible = !sshPasswordVisible }) {
                         Icon(
                             imageVector = if (sshPasswordVisible) {
-                                Icons.Filled.VisibilityOff
+                                AppIcons.VisibilityOff
                             } else {
-                                Icons.Filled.Visibility
+                                AppIcons.Visibility
                             },
                             contentDescription = null,
                         )
@@ -406,7 +404,7 @@ private fun SshTunnelSection(
                     modifier = Modifier.testTag("connection_editor_ssh_private_key_browse"),
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Folder,
+                        imageVector = AppIcons.Folder,
                         contentDescription = t(StringKeys.ConnectionEditor.SshPrivateKeyBrowseDescription),
                     )
                     Text(" ${t(StringKeys.ConnectionEditor.SshPrivateKeyBrowse)}")
@@ -437,9 +435,9 @@ private fun SshTunnelSection(
                     IconButton(onClick = { passphraseVisible = !passphraseVisible }) {
                         Icon(
                             imageVector = if (passphraseVisible) {
-                                Icons.Filled.VisibilityOff
+                                AppIcons.VisibilityOff
                             } else {
-                                Icons.Filled.Visibility
+                                AppIcons.Visibility
                             },
                             contentDescription = null,
                         )

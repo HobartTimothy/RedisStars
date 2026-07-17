@@ -1,22 +1,20 @@
 package org.roberthu.rs.shell
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Article
-import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
+import org.roberthu.rs.shell.icons.AppIcons
 
 enum class ShellDestination(
     val icon: ImageVector,
 ) {
-    Connections(icon = Icons.Filled.Cable),
-    Monitor(icon = Icons.Filled.Speed),
-    RuntimeLogs(icon = Icons.Filled.Article),
-    Settings(icon = Icons.Default.Settings),
+    Connections(icon = AppIcons.Cable),
+    Monitor(icon = AppIcons.Speed),
+    RuntimeLogs(icon = AppIcons.Article),
+    Settings(icon = Icons.Filled.Settings),
     ;
 
     companion object {

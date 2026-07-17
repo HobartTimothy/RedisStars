@@ -16,12 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CreateNewFolder
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Folder
+import org.roberthu.rs.shell.icons.AppIcons
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -249,7 +245,7 @@ fun ConnectionsPane(
                 ConnectionsContextTarget.Root -> {
                     DropdownMenuItem(
                         text = { Text(t(StringKeys.Connections.ContextCreateConnection)) },
-                        leadingIcon = { Icon(Icons.Default.AddLink, contentDescription = null) },
+                        leadingIcon = { Icon(AppIcons.AddLink, contentDescription = null) },
                         onClick = {
                             contextMenuExpanded = false
                             contextTarget = null
@@ -259,7 +255,7 @@ fun ConnectionsPane(
                     )
                     DropdownMenuItem(
                         text = { Text(t(StringKeys.Connections.ContextAddGroup)) },
-                        leadingIcon = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) },
+                        leadingIcon = { Icon(AppIcons.CreateNewFolder, contentDescription = null) },
                         onClick = {
                             contextMenuExpanded = false
                             contextTarget = null
@@ -271,7 +267,7 @@ fun ConnectionsPane(
                 is ConnectionsContextTarget.Group -> {
                     DropdownMenuItem(
                         text = { Text(t(StringKeys.Connections.ContextCreateConnectionInGroup)) },
-                        leadingIcon = { Icon(Icons.Default.AddLink, contentDescription = null) },
+                        leadingIcon = { Icon(AppIcons.AddLink, contentDescription = null) },
                         onClick = {
                             contextMenuExpanded = false
                             contextTarget = null
@@ -281,7 +277,7 @@ fun ConnectionsPane(
                     )
                     DropdownMenuItem(
                         text = { Text(t(StringKeys.Connections.ContextCreateRootConnection)) },
-                        leadingIcon = { Icon(Icons.Default.AddLink, contentDescription = null) },
+                        leadingIcon = { Icon(AppIcons.AddLink, contentDescription = null) },
                         onClick = {
                             contextMenuExpanded = false
                             contextTarget = null
@@ -291,7 +287,7 @@ fun ConnectionsPane(
                     )
                     DropdownMenuItem(
                         text = { Text(t(StringKeys.Connections.ContextAddGroup)) },
-                        leadingIcon = { Icon(Icons.Default.CreateNewFolder, contentDescription = null) },
+                        leadingIcon = { Icon(AppIcons.CreateNewFolder, contentDescription = null) },
                         onClick = {
                             contextMenuExpanded = false
                             contextTarget = null
@@ -419,12 +415,12 @@ private fun GroupHeaderRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                if (group.expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                if (group.expanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
                 contentDescription = null,
                 modifier = Modifier.padding(2.dp),
             )
             Icon(
-                Icons.Default.Folder,
+                AppIcons.Folder,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )

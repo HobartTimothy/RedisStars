@@ -17,11 +17,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Refresh
+import org.roberthu.rs.shell.icons.AppIcons
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -122,7 +122,7 @@ fun KeyBrowserScreen(
                     ) {
                         Icon(
                             if (state.keyListView == KeyListViewMode.Tree) {
-                                Icons.Default.AccountTree
+                                AppIcons.AccountTree
                             } else {
                                 Icons.Default.List
                             },

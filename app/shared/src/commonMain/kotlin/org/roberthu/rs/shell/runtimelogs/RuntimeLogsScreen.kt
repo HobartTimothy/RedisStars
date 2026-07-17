@@ -18,10 +18,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import org.roberthu.rs.shell.icons.AppIcons
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -250,7 +249,7 @@ private fun RuntimeLogsToolbar(
                 modifier = Modifier.testTag("runtime_logs_pause_toggle"),
             ) {
                 Icon(
-                    imageVector = if (state.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                    imageVector = if (state.paused) Icons.Filled.PlayArrow else AppIcons.Pause,
                     contentDescription = if (state.paused) {
                         t(StringKeys.RuntimeLogs.Resume)
                     } else {
@@ -281,7 +280,7 @@ private fun RuntimeLogsToolbar(
                 modifier = Modifier.testTag("runtime_logs_export"),
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Download,
+                    imageVector = AppIcons.Download,
                     contentDescription = t(StringKeys.RuntimeLogs.Export),
                 )
             }
