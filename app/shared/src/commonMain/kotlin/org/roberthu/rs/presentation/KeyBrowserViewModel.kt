@@ -80,6 +80,7 @@ class KeyBrowserViewModel(
     private val mutableState = MutableStateFlow(KeyBrowserUiState())
     val state: StateFlow<KeyBrowserUiState> = mutableState.asStateFlow()
     private var scanJob: Job? = null
+    private val keyIndex = DedupingKeyList()
 
     fun setPattern(pattern: String) {
         mutableState.update { it.copy(pattern = pattern) }
@@ -95,6 +96,7 @@ class KeyBrowserViewModel(
         browserOptions: ConnectionBrowserOptions = ConnectionBrowserOptions(),
     ) {
         val normalized = browserOptions.normalized()
+        keyIndex.clear()
         mutableState.update {
             it.copy(
                 clusterMode = clusterMode,
@@ -118,6 +120,7 @@ class KeyBrowserViewModel(
 
     fun onDisconnected() {
         cancel()
+        keyIndex.clear()
         mutableState.value = KeyBrowserUiState()
     }
 
@@ -324,6 +327,9 @@ class KeyBrowserViewModel(
         val pattern = mutableState.value.pattern.ifBlank { "*" }
         val database = mutableState.value.selectedDatabase
         val countHint = mutableState.value.browserOptions.keyLoadBatchSize.coerceIn(1, 10_000)
+        if (!append) {
+            keyIndex.clear()
+        }
         mutableState.update {
             it.copy(
                 loading = true,
@@ -348,9 +354,9 @@ class KeyBrowserViewModel(
                         mutableState.update { current ->
                             if (current.scanRequestId != requestId) return@update current
                             val keys = if (append) {
-                                (current.keys + page.keys).distinctBy(RedisKeySummary::key)
+                                keyIndex.appendAll(page.keys)
                             } else {
-                                page.keys.distinctBy(RedisKeySummary::key)
+                                keyIndex.replaceAll(page.keys)
                             }
                             current.copy(
                                 keys = keys,
