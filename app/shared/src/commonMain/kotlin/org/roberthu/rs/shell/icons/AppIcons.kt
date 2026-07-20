@@ -409,6 +409,31 @@ object AppIcons {
         }
     }
 
+    val Search: ImageVector by lazy {
+        materialIcon("Search") {
+            moveTo(15.5f, 14.0f)
+            horizontalLineToRelative(-0.79f)
+            lineToRelative(-0.28f, -0.27f)
+            curveTo(15.41f, 12.59f, 16.0f, 11.11f, 16.0f, 9.5f)
+            curveTo(16.0f, 5.91f, 13.09f, 3.0f, 9.5f, 3.0f)
+            reflectiveCurveTo(3.0f, 5.91f, 3.0f, 9.5f)
+            reflectiveCurveTo(5.91f, 16.0f, 9.5f, 16.0f)
+            curveToRelative(1.61f, 0.0f, 3.09f, -0.59f, 4.23f, -1.57f)
+            lineToRelative(0.27f, 0.28f)
+            verticalLineToRelative(0.79f)
+            lineToRelative(5.0f, 4.99f)
+            lineTo(20.49f, 19.0f)
+            lineToRelative(-4.99f, -5.0f)
+            close()
+            moveTo(9.5f, 14.0f)
+            curveToRelative(2.49f, 0.0f, 4.5f, -2.01f, 4.5f, -4.5f)
+            reflectiveCurveTo(11.99f, 5.0f, 9.5f, 5.0f)
+            reflectiveCurveTo(5.0f, 7.01f, 5.0f, 9.5f)
+            reflectiveCurveTo(7.01f, 14.0f, 9.5f, 14.0f)
+            close()
+        }
+    }
+
     val DragHandle: ImageVector by lazy {
         materialIcon("DragHandle") {
             moveTo(9.0f, 3.0f)

@@ -14,6 +14,7 @@ import org.roberthu.rs.shell.keys.AddKeyDialog
 import org.roberthu.rs.shell.keys.KeyBrowserScreen
 import org.roberthu.rs.theme.RedisTheme
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
@@ -36,6 +37,7 @@ class KeyBrowserScreenTest {
                     onSelect = {},
                     onOpenAddKey = {},
                     onSelectDatabase = {},
+                    onTypeFilterChange = {},
                 )
             }
         }
@@ -58,6 +60,7 @@ class KeyBrowserScreenTest {
                     onSelect = {},
                     onOpenAddKey = {},
                     onSelectDatabase = {},
+                    onTypeFilterChange = {},
                 )
             }
         }
@@ -79,6 +82,7 @@ class KeyBrowserScreenTest {
                     onSelect = {},
                     onOpenAddKey = {},
                     onSelectDatabase = {},
+                    onTypeFilterChange = {},
                 )
             }
         }
@@ -106,11 +110,37 @@ class KeyBrowserScreenTest {
                     onSelect = {},
                     onOpenAddKey = {},
                     onSelectDatabase = {},
+                    onTypeFilterChange = {},
                 )
             }
         }
 
         onNodeWithTag("keys_database_dropdown").assertIsDisplayed()
+    }
+
+    @Test
+    fun typeFilter_selectingHashInvokesCallback() = runComposeUiTest {
+        var selected: RedisKeyType? = null
+        setContent {
+            RedisTheme(darkTheme = true) {
+                KeyBrowserScreen(
+                    state = KeyBrowserUiState(),
+                    enabled = true,
+                    onPatternChange = {},
+                    onRefresh = {},
+                    onLoadMore = {},
+                    onCancel = {},
+                    onSelect = {},
+                    onOpenAddKey = {},
+                    onSelectDatabase = {},
+                    onTypeFilterChange = { selected = it },
+                )
+            }
+        }
+
+        onNodeWithTag("keys_type_filter").assertIsDisplayed().performClick()
+        onNodeWithTag("keys_type_filter_hash").performClick()
+        assertEquals(RedisKeyType.Hash, selected)
     }
 
     @Test

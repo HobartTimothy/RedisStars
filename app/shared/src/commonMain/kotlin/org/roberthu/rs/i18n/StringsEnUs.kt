@@ -203,8 +203,11 @@ internal object StringsEnUs {
         StringKeys.Keys.Add to "Add Key",
         StringKeys.Keys.Refresh to "Refresh",
         StringKeys.Keys.PatternPlaceholder to "users:*",
+        StringKeys.Keys.FilterPlaceholder to "Filter",
         StringKeys.Keys.PatternLabel to "Match Pattern",
         StringKeys.Keys.Empty to "No keys match this pattern.",
+        StringKeys.Keys.EmptyTitle to "No data",
+        StringKeys.Keys.Search to "Search",
         StringKeys.Keys.NotConnected to "Connect to Redis to browse keys.",
         StringKeys.Keys.LoadMore to "Load More",
         StringKeys.Keys.CancelScan to "Cancel",
@@ -212,6 +215,7 @@ internal object StringsEnUs {
         StringKeys.Keys.ClusterPartial to "%1\$d cluster node(s) failed to scan; results may be incomplete.",
         StringKeys.Keys.Database to "Database",
         StringKeys.Keys.DatabaseFormat to "db%1\$d (%2\$d)",
+        StringKeys.Keys.DatabaseSelectionFormat to "db%1\$d (%2\$d/%3\$d)",
         StringKeys.Keys.ClusterDbTooltip to "Cluster mode supports db0 only",
         StringKeys.Keys.TtlPermanent to "Persistent",
         StringKeys.Keys.ClearPattern to "Clear",
@@ -219,6 +223,8 @@ internal object StringsEnUs {
         StringKeys.Keys.ViewToggle to "Toggle key list view",
         StringKeys.Keys.ViewTree to "Tree view",
         StringKeys.Keys.ViewFlat to "Flat view",
+        StringKeys.Keys.TypeFilterAll to "All",
+        StringKeys.Keys.TypeFilterTooltip to "Filter by type",
 
         // Add key dialog
         StringKeys.AddKey.Title to "Add Key",

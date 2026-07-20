@@ -44,15 +44,7 @@ import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.AddKeyDialogState
 import org.roberthu.rs.theme.color
 
-private val creatableTypes = listOf(
-    RedisKeyType.String,
-    RedisKeyType.Hash,
-    RedisKeyType.List,
-    RedisKeyType.Set,
-    RedisKeyType.ZSet,
-    RedisKeyType.Stream,
-    RedisKeyType.Json,
-)
+private val creatableTypes = filterableKeyTypes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

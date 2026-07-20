@@ -211,8 +211,11 @@ object StringKeys {
         const val Add = "keys.add"
         const val Refresh = "keys.refresh"
         const val PatternPlaceholder = "keys.pattern_placeholder"
+        const val FilterPlaceholder = "keys.filter_placeholder"
         const val PatternLabel = "keys.pattern_label"
         const val Empty = "keys.empty"
+        const val EmptyTitle = "keys.empty_title"
+        const val Search = "keys.search"
         const val NotConnected = "keys.not_connected"
         const val LoadMore = "keys.load_more"
         const val CancelScan = "keys.cancel_scan"
@@ -220,6 +223,7 @@ object StringKeys {
         const val ClusterPartial = "keys.cluster_partial"
         const val Database = "keys.database"
         const val DatabaseFormat = "keys.database_format"
+        const val DatabaseSelectionFormat = "keys.database_selection_format"
         const val ClusterDbTooltip = "keys.cluster_db_tooltip"
         const val TtlPermanent = "keys.ttl_permanent"
         const val ClearPattern = "keys.clear_pattern"
@@ -227,6 +231,8 @@ object StringKeys {
         const val ViewToggle = "keys.view_toggle"
         const val ViewTree = "keys.view_tree"
         const val ViewFlat = "keys.view_flat"
+        const val TypeFilterAll = "keys.type_filter_all"
+        const val TypeFilterTooltip = "keys.type_filter_tooltip"
     }
 
     object AddKey {

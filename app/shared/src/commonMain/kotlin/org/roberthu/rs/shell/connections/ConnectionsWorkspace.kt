@@ -133,8 +133,8 @@ fun ConnectionsWorkspace(
                 },
                 onOpenAddKey = browser::openAddKeyDialog,
                 onSelectDatabase = browser::selectDatabase,
+                onTypeFilterChange = browser::setTypeFilter,
                 onKeyListViewChange = browser::setKeyListView,
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerLow),
             )
         }
         KeyDetailScreen(

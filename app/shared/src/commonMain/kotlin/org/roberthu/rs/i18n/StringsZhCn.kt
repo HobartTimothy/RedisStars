@@ -200,8 +200,11 @@ internal object StringsZhCn {
         StringKeys.Keys.Add to "添加键",
         StringKeys.Keys.Refresh to "刷新",
         StringKeys.Keys.PatternPlaceholder to "users:*",
+        StringKeys.Keys.FilterPlaceholder to "筛选",
         StringKeys.Keys.PatternLabel to "匹配模式",
         StringKeys.Keys.Empty to "没有匹配此模式的键。",
+        StringKeys.Keys.EmptyTitle to "无数据",
+        StringKeys.Keys.Search to "搜索",
         StringKeys.Keys.NotConnected to "连接 Redis 后可浏览键。",
         StringKeys.Keys.LoadMore to "加载更多",
         StringKeys.Keys.CancelScan to "取消",
@@ -209,6 +212,7 @@ internal object StringsZhCn {
         StringKeys.Keys.ClusterPartial to "%1\$d 个集群节点扫描失败，结果可能不完整。",
         StringKeys.Keys.Database to "数据库",
         StringKeys.Keys.DatabaseFormat to "db%1\$d（%2\$d）",
+        StringKeys.Keys.DatabaseSelectionFormat to "db%1\$d（%2\$d/%3\$d）",
         StringKeys.Keys.ClusterDbTooltip to "Cluster 模式仅支持 db0",
         StringKeys.Keys.TtlPermanent to "永久",
         StringKeys.Keys.ClearPattern to "清除",
@@ -216,6 +220,8 @@ internal object StringsZhCn {
         StringKeys.Keys.ViewToggle to "切换键列表视图",
         StringKeys.Keys.ViewTree to "树形视图",
         StringKeys.Keys.ViewFlat to "平铺视图",
+        StringKeys.Keys.TypeFilterAll to "全部",
+        StringKeys.Keys.TypeFilterTooltip to "按类型筛选",
 
         // Add key dialog
         StringKeys.AddKey.Title to "添加键",

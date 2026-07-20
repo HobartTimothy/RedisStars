@@ -49,6 +49,7 @@ data class AddKeyDialogState(
 
 data class KeyBrowserUiState(
     val pattern: String = "*",
+    val typeFilter: RedisKeyType? = null,
     val keys: List<RedisKeySummary> = emptyList(),
     val nextCursorToken: String? = null,
     val loading: Boolean = false,
@@ -84,6 +85,12 @@ class KeyBrowserViewModel(
 
     fun setPattern(pattern: String) {
         mutableState.update { it.copy(pattern = pattern) }
+    }
+
+    fun setTypeFilter(type: RedisKeyType?) {
+        if (mutableState.value.typeFilter == type) return
+        mutableState.update { it.copy(typeFilter = type) }
+        refresh()
     }
 
     fun select(key: RedisKeySummary) {
@@ -346,6 +353,7 @@ class KeyBrowserViewModel(
                     ScanQuery(
                         database = database,
                         pattern = pattern,
+                        type = mutableState.value.typeFilter,
                         cursorToken = cursor,
                         countHint = countHint,
                     ),

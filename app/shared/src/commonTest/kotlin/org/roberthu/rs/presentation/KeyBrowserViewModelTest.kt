@@ -258,6 +258,77 @@ class KeyBrowserViewModelTest {
 
         assertEquals(listOf(0), viewModel.state.value.databases.map { it.index })
     }
+
+    @Test
+    fun setTypeFilter_updatesScanQueryAndRefreshes() = runTest {
+        val port = RecordingKeyBrowserPort(
+            results = ArrayDeque(
+                listOf(
+                    Result.success(ScanPage(emptyList(), null)),
+                    Result.success(
+                        ScanPage(
+                            keys = listOf(RedisKeySummary("users:1", RedisKeyType.Hash)),
+                            nextCursorToken = null,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val viewModel = KeyBrowserViewModel(port, FakeKeyCommandPort(), this)
+
+        viewModel.refresh()
+        advanceUntilIdle()
+        assertNull(port.queries.last().type)
+
+        viewModel.setTypeFilter(RedisKeyType.Hash)
+        advanceUntilIdle()
+
+        assertEquals(RedisKeyType.Hash, viewModel.state.value.typeFilter)
+        assertEquals(RedisKeyType.Hash, port.queries.last().type)
+        assertEquals(listOf("users:1"), viewModel.state.value.keys.map { it.key })
+    }
+
+    @Test
+    fun loadMore_preservesTypeFilter() = runTest {
+        val port = RecordingKeyBrowserPort(
+            results = ArrayDeque(
+                listOf(
+                    Result.success(
+                        ScanPage(
+                            keys = listOf(RedisKeySummary("a", RedisKeyType.Hash)),
+                            nextCursorToken = "1",
+                        ),
+                    ),
+                    Result.success(
+                        ScanPage(
+                            keys = listOf(RedisKeySummary("b", RedisKeyType.Hash)),
+                            nextCursorToken = null,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val viewModel = KeyBrowserViewModel(port, FakeKeyCommandPort(), this)
+
+        viewModel.setTypeFilter(RedisKeyType.Hash)
+        advanceUntilIdle()
+        viewModel.loadMore()
+        advanceUntilIdle()
+
+        assertEquals(listOf(RedisKeyType.Hash, RedisKeyType.Hash), port.queries.map { it.type })
+    }
+
+    @Test
+    fun onDisconnected_resetsTypeFilter() = runTest {
+        val port = RecordingKeyBrowserPort()
+        val viewModel = KeyBrowserViewModel(port, FakeKeyCommandPort(), this)
+
+        viewModel.setTypeFilter(RedisKeyType.Set)
+        advanceUntilIdle()
+        viewModel.onDisconnected()
+
+        assertNull(viewModel.state.value.typeFilter)
+    }
 }
 
 private class RecordingKeyBrowserPort(

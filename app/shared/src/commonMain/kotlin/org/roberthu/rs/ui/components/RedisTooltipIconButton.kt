@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.Dp
  * @param enabled Whether the button accepts interactions. Defaults to true.
  * @param testTag Optional test tag applied to the [IconButton] node.
  * @param iconSize Size of the [Icon]. Defaults to the icon default (no explicit size).
+ * @param buttonSize Optional square size for the [IconButton] touch target.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +46,7 @@ fun RedisTooltipIconButton(
     enabled: Boolean = true,
     testTag: String? = null,
     iconSize: Dp? = null,
+    buttonSize: Dp? = null,
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
@@ -55,6 +57,7 @@ fun RedisTooltipIconButton(
         val buttonModifier = Modifier
             .semantics { contentDescription = tooltip }
             .let { m -> if (testTag != null) m.testTag(testTag) else m }
+            .let { m -> if (buttonSize != null) m.size(buttonSize) else m }
 
         IconButton(
             onClick = onClick,
