@@ -24,6 +24,7 @@ import org.roberthu.rs.presentation.KeyDetailViewModel
 import org.roberthu.rs.shell.detail.KeyDetailScreen
 import org.roberthu.rs.shell.keys.AddKeyDialog
 import org.roberthu.rs.shell.keys.KeyBrowserScreen
+import org.roberthu.rs.ui.theme.RedisTheme
 
 @Composable
 fun ConnectionsWorkspace(
@@ -89,7 +90,8 @@ fun ConnectionsWorkspace(
         }
     }
 
-    Row(modifier = modifier.fillMaxSize()) {
+    val colors = RedisTheme.colors
+    Row(modifier = modifier.fillMaxSize().background(colors.appBackground)) {
         ConnectionsPane(
             state = connectionsState,
             onSelect = connections::select,
@@ -117,7 +119,7 @@ fun ConnectionsWorkspace(
             onDismissError = connections::dismissError,
             onPickSshPrivateKeyPath = onPickSshPrivateKeyPath,
             onMoveSidebarItem = connections::moveSidebarItem,
-            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer),
+            modifier = Modifier.background(colors.paneSurface),
         )
         if (connected) {
             KeyBrowserScreen(

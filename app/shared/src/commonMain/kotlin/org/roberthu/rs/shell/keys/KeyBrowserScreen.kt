@@ -70,6 +70,12 @@ import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
 import org.roberthu.rs.presentation.KeyBrowserUiState
 import org.roberthu.rs.theme.color
+import org.roberthu.rs.ui.components.RedisEmptyState
+import org.roberthu.rs.ui.components.RedisErrorState
+import org.roberthu.rs.ui.components.RedisIconButtonStyle
+import org.roberthu.rs.ui.components.RedisNotConnectedState
+import org.roberthu.rs.ui.components.RedisTooltipIconButton
+import org.roberthu.rs.ui.components.RedisWarningBanner
 import org.roberthu.rs.ui.theme.RedisTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,22 +95,25 @@ fun KeyBrowserScreen(
     modifier: Modifier = Modifier,
 ) {
     val dim = RedisTheme.dimensions
+    val spacing = RedisTheme.spacing
+    val colors = RedisTheme.colors
+    val shapes = RedisTheme.shapes
     val toolbarHeight = dim.iconButtonSize
     val fieldTextStyle = MaterialTheme.typography.bodySmall
-    val borderColor = MaterialTheme.colorScheme.outlineVariant
+    val borderColor = colors.divider
     val showEmptyState = enabled && !state.loading && state.error == null && state.keys.isEmpty()
     Column(
         modifier = modifier
             .testTag("key_browser_pane")
-            .widthIn(min = 340.dp)
-            .width(340.dp)
+            .widthIn(min = dim.keyBrowserPaneMinWidth)
+            .width(dim.keyBrowserPaneDefaultWidth)
             .fillMaxHeight()
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(horizontal = spacing.sm, vertical = spacing.toolbarGap),
+        verticalArrangement = Arrangement.spacedBy(spacing.toolbarGap),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing.toolbarGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             KeyFilterField(
@@ -119,35 +128,35 @@ fun KeyBrowserScreen(
                 onSearch = onRefresh,
                 modifier = Modifier.weight(1f),
             )
-            KeyToolbarIconButton(
+            RedisTooltipIconButton(
                 tooltip = t(StringKeys.Keys.Search),
                 imageVector = AppIcons.Search,
                 enabled = enabled && !state.loading,
                 onClick = onRefresh,
-                buttonSize = toolbarHeight,
-                iconSize = dim.iconSize,
-                borderColor = borderColor,
                 testTag = "keys_search",
+                iconSize = dim.iconSize,
+                buttonSize = toolbarHeight,
+                style = RedisIconButtonStyle.Outlined,
             )
-            KeyToolbarIconButton(
+            RedisTooltipIconButton(
                 tooltip = t(StringKeys.Keys.Refresh),
                 imageVector = Icons.Default.Refresh,
                 enabled = enabled && !state.loading,
                 onClick = onRefresh,
-                buttonSize = toolbarHeight,
-                iconSize = dim.iconSize,
-                borderColor = borderColor,
                 testTag = "keys_refresh",
+                iconSize = dim.iconSize,
+                buttonSize = toolbarHeight,
+                style = RedisIconButtonStyle.Outlined,
             )
-            KeyToolbarIconButton(
+            RedisTooltipIconButton(
                 tooltip = t(StringKeys.Keys.Add),
                 imageVector = Icons.Default.Add,
                 enabled = enabled,
                 onClick = onOpenAddKey,
-                buttonSize = toolbarHeight,
-                iconSize = dim.iconSize,
-                borderColor = borderColor,
                 testTag = "keys_add",
+                iconSize = dim.iconSize,
+                buttonSize = toolbarHeight,
+                style = RedisIconButtonStyle.Outlined,
             )
         }
 
@@ -168,36 +177,32 @@ fun KeyBrowserScreen(
         }
 
         if (!enabled) {
-            Text(
-                t(StringKeys.Keys.NotConnected),
-                style = fieldTextStyle,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            RedisNotConnectedState(
+                message = t(StringKeys.Keys.NotConnected),
+                testTag = "keys_not_connected",
             )
         }
         state.error?.let {
-            Surface(
-                color = MaterialTheme.colorScheme.errorContainer,
-                modifier = Modifier.fillMaxWidth().testTag("key_scan_error"),
-            ) {
-                Text(
-                    "$it ${t(StringKeys.Keys.ScanErrorHint)}",
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(8.dp),
-                    style = fieldTextStyle,
-                )
-            }
+            RedisErrorState(
+                message = it,
+                hint = t(StringKeys.Keys.ScanErrorHint),
+                testTag = "key_scan_error",
+            )
         }
         state.partialFailures.takeIf { it.isNotEmpty() }?.let { failures ->
-            Text(
-                t(StringKeys.Keys.ClusterPartial, failures.size),
-                color = MaterialTheme.colorScheme.tertiary,
-                style = fieldTextStyle,
+            RedisWarningBanner(
+                message = t(StringKeys.Keys.ClusterPartial, failures.size),
+                testTag = "key_scan_partial",
             )
         }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (showEmptyState) {
-                KeyBrowserEmptyState(modifier = Modifier.align(Alignment.Center))
+                RedisEmptyState(
+                    message = t(StringKeys.Keys.EmptyTitle),
+                    modifier = Modifier.align(Alignment.Center),
+                    testTag = "key_list_empty",
+                )
             }
             val keyTree = remember(state.keys, state.keySeparator, state.keyListView) {
                 if (state.keyListView == KeyListViewMode.Tree) {
@@ -244,7 +249,7 @@ fun KeyBrowserScreen(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing.toolbarGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DatabaseSelector(
@@ -270,7 +275,7 @@ fun KeyBrowserScreen(
             } else {
                 Icons.Default.List
             }
-            KeyToolbarIconButton(
+            RedisTooltipIconButton(
                 tooltip = viewToggleLabel,
                 imageVector = viewToggleIcon,
                 enabled = enabled,
@@ -279,10 +284,10 @@ fun KeyBrowserScreen(
                         if (state.keyListView == KeyListViewMode.Tree) KeyListViewMode.Flat else KeyListViewMode.Tree,
                     )
                 },
-                buttonSize = toolbarHeight,
-                iconSize = dim.iconSize,
-                borderColor = borderColor,
                 testTag = "keys_view_toggle",
+                iconSize = dim.iconSize,
+                buttonSize = toolbarHeight,
+                style = RedisIconButtonStyle.Outlined,
             )
         }
     }
@@ -368,86 +373,6 @@ private fun KeyFilterField(
                 }
             }
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun KeyToolbarIconButton(
-    tooltip: String,
-    imageVector: ImageVector,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    buttonSize: Dp,
-    iconSize: Dp,
-    borderColor: Color,
-    testTag: String,
-) {
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-        tooltip = { Text(tooltip) },
-        state = rememberTooltipState(),
-    ) {
-        Surface(
-            onClick = onClick,
-            enabled = enabled,
-            shape = RoundedCornerShape(6.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, borderColor),
-            modifier = Modifier
-                .size(buttonSize)
-                .testTag(testTag),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = imageVector,
-                    contentDescription = tooltip,
-                    modifier = Modifier.size(iconSize),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun KeyBrowserEmptyState(modifier: Modifier = Modifier) {
-    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.28f)
-    Column(
-        modifier = modifier
-            .padding(horizontal = 16.dp)
-            .testTag("key_list_empty"),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(contentAlignment = Alignment.TopEnd) {
-            Icon(
-                imageVector = AppIcons.Folder,
-                contentDescription = null,
-                modifier = Modifier.size(56.dp),
-                tint = iconTint,
-            )
-            Box(
-                modifier = Modifier
-                    .padding(top = 2.dp, end = 2.dp)
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Clear,
-                    contentDescription = null,
-                    modifier = Modifier.size(12.dp),
-                    tint = iconTint,
-                )
-            }
-        }
-        Text(
-            t(StringKeys.Keys.EmptyTitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-        )
     }
 }
 
@@ -650,12 +575,10 @@ private fun KeyListRow(
     depth: Int = 0,
 ) {
     val dim = RedisTheme.dimensions
+    val colors = RedisTheme.colors
+    val spacing = RedisTheme.spacing
     Surface(
-        color = if (selected) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
+        color = if (selected) colors.selectedSurface else colors.paneSurface,
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = (depth * 12).dp)
@@ -663,7 +586,10 @@ private fun KeyListRow(
             .testTag("key_${key.key}"),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            modifier = Modifier.padding(
+                horizontal = spacing.listItemPaddingHorizontal,
+                vertical = spacing.listItemPaddingVertical,
+            ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -674,11 +600,11 @@ private fun KeyListRow(
                     .background(key.type.color()),
             )
             Column {
-                Text(key.key, style = MaterialTheme.typography.bodySmall)
+                Text(key.key, style = RedisTheme.typography.keyName, color = colors.textPrimary)
                 Text(
                     key.type.name,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = colors.textSecondary,
                 )
             }
         }

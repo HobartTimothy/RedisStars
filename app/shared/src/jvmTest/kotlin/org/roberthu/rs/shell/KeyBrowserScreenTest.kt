@@ -12,7 +12,7 @@ import org.roberthu.rs.presentation.AddKeyDialogState
 import org.roberthu.rs.presentation.KeyBrowserUiState
 import org.roberthu.rs.shell.keys.AddKeyDialog
 import org.roberthu.rs.shell.keys.KeyBrowserScreen
-import org.roberthu.rs.theme.RedisTheme
+import org.roberthu.rs.ui.theme.RedisTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -141,6 +141,30 @@ class KeyBrowserScreenTest {
         onNodeWithTag("keys_type_filter").assertIsDisplayed().performClick()
         onNodeWithTag("keys_type_filter_hash").performClick()
         assertEquals(RedisKeyType.Hash, selected)
+    }
+
+    @Test
+    fun toolbar_showsSearchRefreshAndAddActions() = runComposeUiTest {
+        setContent {
+            RedisTheme(darkTheme = true) {
+                KeyBrowserScreen(
+                    state = KeyBrowserUiState(),
+                    enabled = true,
+                    onPatternChange = {},
+                    onRefresh = {},
+                    onLoadMore = {},
+                    onCancel = {},
+                    onSelect = {},
+                    onOpenAddKey = {},
+                    onSelectDatabase = {},
+                    onTypeFilterChange = {},
+                )
+            }
+        }
+
+        onNodeWithTag("keys_search").assertIsDisplayed()
+        onNodeWithTag("keys_refresh").assertIsDisplayed()
+        onNodeWithTag("keys_add").assertIsDisplayed()
     }
 
     @Test

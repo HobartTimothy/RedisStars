@@ -1,8 +1,8 @@
 package org.roberthu.rs.shell
 
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import org.roberthu.rs.domain.AppLanguage
+import org.roberthu.rs.ui.theme.RedisDimensions
 
 /**
  * Single source of truth for shell chrome navigation + left-rail collapse.
@@ -31,8 +31,8 @@ sealed interface ShellUiAction {
 }
 
 object ShellRailDefaults {
-    val ExpandedWidth: Dp = 208.dp
-    val CollapsedWidth: Dp = 68.dp
+    val ExpandedWidth: Dp = RedisDimensions().sidebarExpandedWidth
+    val CollapsedWidth: Dp = RedisDimensions().sidebarCollapsedWidth
 
     fun width(collapsed: Boolean): Dp =
         if (collapsed) CollapsedWidth else ExpandedWidth

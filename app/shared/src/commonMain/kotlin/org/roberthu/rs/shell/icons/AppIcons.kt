@@ -360,51 +360,45 @@ object AppIcons {
     }
 
     /**
-     * Panel-left icon: expand the navigation sidebar.
-     * Represents a layout with the left panel visible (three horizontal lines,
-     * left column highlighted).
+     * Panel-left: show the navigation sidebar (expand rail).
      */
     val SidebarOpen: ImageVector by lazy {
         materialIcon("SidebarOpen") {
-            // outer rect
-            moveTo(3.0f, 3.0f)
-            horizontalLineToRelative(18.0f)
-            verticalLineToRelative(18.0f)
-            horizontalLineToRelative(-18.0f)
+            moveTo(5.0f, 5.0f)
+            horizontalLineToRelative(14.0f)
+            verticalLineToRelative(14.0f)
+            horizontalLineTo(5.0f)
             close()
-            // fill: draw background by subtracting — use two filled rects instead
-            // Left panel column (filled accent)
-            moveTo(3.0f, 3.0f)
-            verticalLineToRelative(18.0f)
-            horizontalLineToRelative(6.0f)
-            verticalLineToRelative(-18.0f)
+            moveTo(7.0f, 7.0f)
+            horizontalLineToRelative(4.0f)
+            verticalLineToRelative(10.0f)
+            horizontalLineTo(7.0f)
             close()
         }
     }
 
     /**
-     * Panel-left-close icon: collapse the navigation sidebar.
-     * Uses a simpler three-bar hamburger with a leftward chevron hint.
+     * Panel-left-close: hide the navigation sidebar (collapse rail).
      */
     val SidebarClose: ImageVector by lazy {
         materialIcon("SidebarClose") {
-            // top bar
-            moveTo(3.0f, 18.0f)
-            horizontalLineToRelative(18.0f)
-            verticalLineToRelative(-2.0f)
-            horizontalLineToRelative(-18.0f)
+            moveTo(5.0f, 5.0f)
+            horizontalLineToRelative(14.0f)
+            verticalLineToRelative(14.0f)
+            horizontalLineTo(5.0f)
             close()
-            // middle bar
-            moveTo(3.0f, 13.0f)
-            horizontalLineToRelative(18.0f)
-            verticalLineToRelative(-2.0f)
-            horizontalLineToRelative(-18.0f)
+            moveTo(7.0f, 7.0f)
+            horizontalLineToRelative(4.0f)
+            verticalLineToRelative(10.0f)
+            horizontalLineTo(7.0f)
             close()
-            // bottom bar
-            moveTo(3.0f, 8.0f)
-            horizontalLineToRelative(18.0f)
-            verticalLineToRelative(-2.0f)
-            horizontalLineToRelative(-18.0f)
+            moveTo(16.5f, 12.0f)
+            lineTo(13.0f, 9.0f)
+            verticalLineToRelative(2.0f)
+            horizontalLineTo(11.0f)
+            verticalLineToRelative(2.0f)
+            horizontalLineToRelative(2.0f)
+            verticalLineToRelative(2.0f)
             close()
         }
     }

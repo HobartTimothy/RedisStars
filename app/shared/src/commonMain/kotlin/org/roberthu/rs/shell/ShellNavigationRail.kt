@@ -43,26 +43,15 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.roberthu.rs.i18n.StringKeys
 import org.roberthu.rs.i18n.t
 import org.roberthu.rs.shell.icons.AppIcons
+import org.roberthu.rs.ui.components.RedisTooltipIconButton
 import org.roberthu.rs.ui.theme.RedisAppConstants
+import org.roberthu.rs.ui.theme.RedisTheme
 
-private val ItemHeight = 48.dp
-private val IconSize = 20.dp
-private val ItemHorizontalPadding = 16.dp
-private val IconTextGap = 12.dp
-private val ItemCornerRadius = 8.dp
-private val SidebarAnimDurationMs = 200
-private val TextAnimDurationMs = 120
-
-/**
- * Left-pinned Gemini-style navigation sidebar.
- *
- * Expanded: shows logo, app name, collapse button, icon + label rows, Settings pinned at bottom.
- * Collapsed: shows expand button and icon-only rows; tooltips reveal labels on hover.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShellNavigationRail(
@@ -72,9 +61,15 @@ fun ShellNavigationRail(
     onToggleCollapsed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val dim = RedisTheme.dimensions
+    val spacing = RedisTheme.spacing
+    val motion = RedisTheme.motion
+    val colors = RedisTheme.colors
+    val shapes = RedisTheme.shapes
+
     val railWidth by animateDpAsState(
         targetValue = ShellRailDefaults.width(railCollapsed),
-        animationSpec = tween(durationMillis = SidebarAnimDurationMs),
+        animationSpec = tween(durationMillis = motion.normal),
         label = "shellRailWidth",
     )
 
@@ -86,7 +81,7 @@ fun ShellNavigationRail(
         modifier = modifier
             .width(railWidth)
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .background(colors.toolbarSurface)
             .testTag("sidebar"),
         verticalArrangement = Arrangement.Top,
     ) {
@@ -95,9 +90,12 @@ fun ShellNavigationRail(
             railCollapsed = railCollapsed,
             toggleLabel = toggleLabel,
             onToggleCollapsed = onToggleCollapsed,
+            itemHeight = dim.sidebarItemHeight,
+            iconSize = dim.sidebarIconSize,
+            horizontalPadding = spacing.lg,
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(spacing.xs))
 
         // ── Primary destinations ──────────────────────────────────────────────
         ShellDestination.primaryDestinations.forEach { item ->
@@ -120,7 +118,7 @@ fun ShellNavigationRail(
             modifier = Modifier.testTag("settings_menu_item"),
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(spacing.sm))
     }
 }
 
@@ -130,11 +128,14 @@ private fun SidebarHeader(
     railCollapsed: Boolean,
     toggleLabel: String,
     onToggleCollapsed: () -> Unit,
+    itemHeight: Dp,
+    iconSize: Dp,
+    horizontalPadding: Dp,
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(ItemHeight),
+            .height(itemHeight),
     ) {
         if (railCollapsed) {
             // Collapsed: centered expand button
@@ -146,6 +147,7 @@ private fun SidebarHeader(
                     railCollapsed = railCollapsed,
                     toggleLabel = toggleLabel,
                     onToggleCollapsed = onToggleCollapsed,
+                    iconSize = iconSize,
                 )
             }
         } else {
@@ -153,13 +155,13 @@ private fun SidebarHeader(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = ItemHorizontalPadding, end = 4.dp),
+                    .padding(start = horizontalPadding, end = RedisTheme.spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = RedisAppConstants.AppName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = RedisTheme.typography.paneTitle,
+                    color = RedisTheme.colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -168,6 +170,7 @@ private fun SidebarHeader(
                     railCollapsed = railCollapsed,
                     toggleLabel = toggleLabel,
                     onToggleCollapsed = onToggleCollapsed,
+                    iconSize = iconSize,
                 )
             }
         }
@@ -180,34 +183,25 @@ private fun SidebarToggleButton(
     railCollapsed: Boolean,
     toggleLabel: String,
     onToggleCollapsed: () -> Unit,
+    iconSize: Dp,
 ) {
     val railStateDescription = if (railCollapsed) {
         t(StringKeys.Nav.RailStateCollapsed)
     } else {
         t(StringKeys.Nav.RailStateExpanded)
     }
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-        tooltip = { PlainTooltip { Text(toggleLabel) } },
-        state = rememberTooltipState(),
-    ) {
-        IconButton(
-            onClick = onToggleCollapsed,
-            modifier = Modifier
-                .testTag("sidebar_toggle")
-                .semantics {
-                    contentDescription = toggleLabel
-                    stateDescription = railStateDescription
-                },
-        ) {
-            Icon(
-                imageVector = if (railCollapsed) AppIcons.SidebarOpen else AppIcons.SidebarClose,
-                contentDescription = null,
-                modifier = Modifier.size(IconSize),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    RedisTooltipIconButton(
+        tooltip = toggleLabel,
+        onClick = onToggleCollapsed,
+        imageVector = if (railCollapsed) AppIcons.SidebarOpen else AppIcons.SidebarClose,
+        testTag = "sidebar_toggle",
+        iconSize = iconSize,
+        style = org.roberthu.rs.ui.components.RedisIconButtonStyle.Plain,
+        modifier = Modifier.semantics {
+            contentDescription = toggleLabel
+            stateDescription = railStateDescription
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -222,32 +216,26 @@ private fun SidebarMenuItem(
     val label = item.label()
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
+    val dim = RedisTheme.dimensions
+    val spacing = RedisTheme.spacing
+    val motion = RedisTheme.motion
+    val colors = RedisTheme.colors
+    val shapes = RedisTheme.shapes
 
-    val selectedBg = MaterialTheme.colorScheme.secondaryContainer
-    val hoverBg = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
     val bgColor = when {
-        selected -> selectedBg
-        isHovered -> hoverBg
-        else -> MaterialTheme.colorScheme.surfaceContainer
+        selected -> colors.selectedSurface
+        isHovered -> colors.hoverSurface
+        else -> colors.toolbarSurface
     }
-    val iconTint = if (selected) {
-        MaterialTheme.colorScheme.onSecondaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val textColor = if (selected) {
-        MaterialTheme.colorScheme.onSecondaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val contentTint = if (selected) colors.onSelectedSurface else colors.iconSecondary
 
     val rowContent: @Composable () -> Unit = {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(ItemHeight)
-                .padding(horizontal = if (railCollapsed) 0.dp else ItemHorizontalPadding)
-                .clip(RoundedCornerShape(ItemCornerRadius))
+                .height(dim.sidebarItemHeight)
+                .padding(horizontal = if (railCollapsed) 0.dp else spacing.lg)
+                .clip(shapes.medium)
                 .background(bgColor)
                 .hoverable(interactionSource)
                 .selectable(
@@ -267,19 +255,19 @@ private fun SidebarMenuItem(
             Icon(
                 imageVector = item.icon,
                 contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(IconSize),
+                tint = contentTint,
+                modifier = Modifier.size(dim.sidebarIconSize),
             )
             AnimatedVisibility(
                 visible = !railCollapsed,
-                enter = fadeIn(animationSpec = tween(TextAnimDurationMs)),
-                exit = fadeOut(animationSpec = tween(TextAnimDurationMs)),
+                enter = fadeIn(animationSpec = tween(RedisTheme.motion.fast)),
+                exit = fadeOut(animationSpec = tween(RedisTheme.motion.fast)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(modifier = Modifier.width(IconTextGap))
+                    Spacer(modifier = Modifier.width(spacing.md))
                     Text(
                         text = label,
-                        color = textColor,
+                        color = contentTint,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,

@@ -18,6 +18,10 @@ data class RedisSpacing(
     val lg: Dp = 16.dp,
     val xl: Dp = 24.dp,
     val xxl: Dp = 32.dp,
+    val panePadding: Dp = 8.dp,
+    val listItemPaddingHorizontal: Dp = 8.dp,
+    val listItemPaddingVertical: Dp = 6.dp,
+    val toolbarGap: Dp = 4.dp,
 )
 
 internal val LocalRedisSpacing = staticCompositionLocalOf { RedisSpacing() }

@@ -17,7 +17,7 @@ import org.roberthu.rs.presentation.AppContainer
 import org.roberthu.rs.port.ConnectionState
 import org.roberthu.rs.shell.RedisAppShell
 import org.roberthu.rs.shell.connections.ConnectionsWorkspace
-import org.roberthu.rs.theme.RedisTheme
+import org.roberthu.rs.ui.theme.RedisTheme
 
 @Composable
 fun App(

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import org.roberthu.rs.shell.icons.AppIcons
+import org.roberthu.rs.ui.theme.RedisTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -119,9 +120,12 @@ fun ConnectionsPane(
         contextMenuExpanded = true
     }
 
+    val dim = RedisTheme.dimensions
+    val spacing = RedisTheme.spacing
+
     Box(
         modifier = modifier
-            .width(280.dp)
+            .width(dim.connectionsPaneWidth)
             .fillMaxHeight()
             .pointerInput(Unit) {
                 awaitPointerEventScope {

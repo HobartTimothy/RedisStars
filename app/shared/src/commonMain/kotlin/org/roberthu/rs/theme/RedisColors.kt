@@ -1,11 +1,12 @@
 package org.roberthu.rs.theme
 
 import androidx.compose.ui.graphics.Color
+import org.roberthu.rs.ui.theme.RedisBrandRed
 
 object RedisColors {
     val Background = Color(0xFF1E1E1E)
     val SurfaceContainer = Color(0xFF2D2D2D)
-    val Primary = Color(0xFFE53935)
+    val Primary = RedisBrandRed
     val ConnectionOk = Color(0xFF4CAF50)
 }
 
